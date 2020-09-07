@@ -1,0 +1,11 @@
+Data file   Optimal solution value
+pmed1       6028
+pmed2       4537
+pmed3       4504
+pmed4       3561
+pmed5       2124
+pmed6       7868
+pmed7       6048
+pmed8       5084
+pmed9       3398
+pmed10      2009
