@@ -3,7 +3,9 @@ package it.polimi.domain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -84,5 +86,14 @@ public class Solution {
 
     public List<Integer> getPointsInPeriod(int period) {
         return IntStream.range(0, periods.length).filter(i -> periods[i] == period).boxed().collect(Collectors.toList());
+    }
+
+    public Map<Integer, Integer> getMedianCounts() {
+        Map<Integer, Integer> counts = new HashMap<>();
+        for (int i=0; i<medians.length; i++) {
+            int c = counts.getOrDefault(medians[i], 0);
+            counts.put(medians[i], c+1);
+        }
+        return counts;
     }
 }

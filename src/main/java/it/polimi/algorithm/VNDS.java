@@ -12,7 +12,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class VNDS {
+public class VNDS implements Solver {
     protected final int MAX_SOLUTION_CHANGES = 100;
     private final Logger LOGGER = LoggerFactory.getLogger(VNDS.class);
     private final Random random;
@@ -29,12 +29,11 @@ public class VNDS {
         this.random = random;
     }
 
-
+    @Override
     public Solution run(Problem problem) {
         double start = System.nanoTime();
 
         Solution opt = getInitial(problem);
-        LOGGER.info("Initial solution. opt=" + opt.getObjective());
 
         Solution cur = opt.clone();
         int k = 1;
@@ -42,7 +41,6 @@ public class VNDS {
         List<Integer> shakable = IntStream.range(0, problem.getN())
                 .filter(i -> problem.getD()[i] - problem.getR()[i] > 0).boxed().collect(Collectors.toList());
         while (k <= problem.getKmax()) {
-            LOGGER.info("Exploring neighborhood of size k=" + k);
             Collections.shuffle(shakable, random);
             Set<Integer> touchedPeriods = new HashSet<>();
             // shaking
@@ -62,14 +60,11 @@ public class VNDS {
 
             // local search
             for (int period : touchedPeriods) {
-                LOGGER.info("Solving period " + period);
                 solveSinglePeriod(cur, problem, period);
             }
 
-            LOGGER.info("Done. cur=" + cur.getObjective() + ", opt=" + opt.getObjective());
             // Move or not
             if (cur.getObjective() < opt.getObjective()) {
-                LOGGER.info("New improving solution founded. Moving.");
                 opt = cur.clone();
                 k = 1;
                 changes++;
@@ -205,7 +200,6 @@ public class VNDS {
             balanceCost += alpha * Math.abs(count - avg);
 
         double cost = distCost + balanceCost;
-        LOGGER.info("Computed obj function. obj=" + cost + ", dist=" + distCost + ", balance=" + balanceCost);
         return cost;
     }
 

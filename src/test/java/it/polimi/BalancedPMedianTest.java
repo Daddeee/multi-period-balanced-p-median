@@ -25,26 +25,34 @@ public class BalancedPMedianTest {
         double[] res = new double[numInstances];
         double[] times = new double[numInstances];
 
-        int from = 1, to = 10;
+        int tries = 10;
+
+        int from = 1, to = 1;
         for (int i=from; i<=to; i++) {
             String path = String.format(basePath, i);
             Problem problem = ORLIBReader.read(path);
-            problem.setKmax(problem.getN() / 3);
 
             //BalancedPMedianExact exact = new BalancedPMedianExact();
             //Solution exactSolution = exact.run(problem);
 
-            BalancedPMedianVNS vns = new BalancedPMedianVNS();
-            Solution vnsSolution = vns.run(problem);
+            double avgRes = 0., avgTime = 0.;
+            for (int j=0; j<tries; j++) {
+                BalancedPMedianVNS vns = new BalancedPMedianVNS();
+                Solution vnsSolution = vns.run(problem);
+                avgRes += vnsSolution.getObjective();
+                avgTime += vnsSolution.getElapsedTime();
+            }
+            avgRes = avgRes / tries;
+            avgTime = avgTime / tries;
 
             System.out.print(path);
-            System.out.println(String.format(" res=%.2f time=%.2fms", vnsSolution.getObjective(), vnsSolution.getElapsedTime()));
+            System.out.println(String.format(" res=%.2f time=%.2fms", avgRes, avgTime));
 
             n[i-1] = problem.getN();
             p[i-1] = problem.getP();
             //opt[i-1] = exactSolution.getObjective();
-            res[i-1] = vnsSolution.getObjective();
-            times[i-1] = vnsSolution.getElapsedTime();
+            res[i-1] = avgRes;
+            times[i-1] = avgTime;
         }
 
         TestCSVWriter writer = new TestCSVWriter(n, p, opt, res, times);
