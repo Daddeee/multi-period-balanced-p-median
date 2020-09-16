@@ -173,7 +173,7 @@ public class PMedianVNS implements Solver {
                 w = w + d[i][goin] - d[i][c1[i]];
             } else {
                 // calculate the cost of deleting c1[i] from solution
-
+                v[xidx[c1[i]]] = v[xidx[c1[i]]] + Math.min(d[i][goin], d[i][c2[i]]) - d[i][c1[i]];
             }
         }
 
