@@ -2,6 +2,7 @@ package it.polimi;
 
 import it.polimi.algorithm.balancedpmedian.BalancedPMedianExact;
 import it.polimi.algorithm.balancedpmedian.BalancedPMedianVNS;
+import it.polimi.algorithm.balancedpmedian.alns.BalancedPMedianALNS;
 import it.polimi.algorithm.pmedian.PMedianVNS;
 import it.polimi.domain.Problem;
 import it.polimi.domain.Solution;
@@ -37,8 +38,9 @@ public class BalancedPMedianTest {
 
             double avgRes = 0., avgTime = 0.;
             for (int j=0; j<tries; j++) {
-                BalancedPMedianVNS vns = new BalancedPMedianVNS();
-                Solution vnsSolution = vns.run(problem);
+                BalancedPMedianVNS solver = new BalancedPMedianVNS();
+                //BalancedPMedianALNS solver = new BalancedPMedianALNS();
+                Solution vnsSolution = solver.run(problem);
                 avgRes += vnsSolution.getObjective();
                 avgTime += vnsSolution.getElapsedTime();
             }
