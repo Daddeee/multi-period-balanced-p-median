@@ -5,6 +5,7 @@ import it.polimi.domain.Problem;
 import it.polimi.domain.Solution;
 import it.polimi.util.Pair;
 import it.polimi.util.Rand;
+import it.polimi.util.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +47,7 @@ public class BalancedPMedianVNS implements Solver {
         int[] c1opt = c[0];
         int[] c2opt = c[1];
         double fopt = computeObjectiveFunction(c1opt, n, d, alpha, avg);
+        int[] axopt = c1opt.clone();
 
         // accepted values
         int[] xacc = xopt.clone();
@@ -53,6 +55,7 @@ public class BalancedPMedianVNS implements Solver {
         int[] c1acc = c1opt.clone();
         int[] c2acc = c2opt.clone();
         double facc = fopt;
+        int[] axacc = axopt.clone();
 
         // current values
         int[] xcur = xopt.clone();
@@ -60,6 +63,7 @@ public class BalancedPMedianVNS implements Solver {
         int[] c1cur = c1opt.clone();
         int[] c2cur = c2opt.clone();
         double fcur = fopt;
+        int[] axcur = axopt.clone();
 
         double temperature = getInitialTemperature(fcur);
         double cooling = 0.995;
@@ -75,9 +79,10 @@ public class BalancedPMedianVNS implements Solver {
                 int goin = xcur[random.nextInt(n - p) + p];
 
                 // find best median to remove
-                Pair<Integer, Double> pair = bfi.move(xcur, xidxcur, c1cur, c2cur, goin);
-                int goout = pair.getFirst();
-                fcur = pair.getSecond();
+                Triple<Integer, Double, int[]> triple = bfi.move(xcur, xidxcur, c1cur, c2cur, goin);
+                int goout = triple.getFirst();
+                fcur = triple.getSecond();
+                axcur = triple.getThird();
 
                 // update xcur and xidx
                 int outidx = xidxcur[goout], inidx = xidxcur[goin];
@@ -91,7 +96,7 @@ public class BalancedPMedianVNS implements Solver {
             }
 
             // Local search
-            fcur = bfi.fastInterchange(xcur, xidxcur, c1cur, c2cur, fcur);
+            fcur = bfi.fastInterchange(xcur, xidxcur, axcur, c1cur, c2cur, fcur);
 
             // Move or not
             if (accept(facc, fcur, temperature)) {
@@ -100,6 +105,7 @@ public class BalancedPMedianVNS implements Solver {
                 c1acc = c1cur.clone();
                 c2acc = c2cur.clone();
                 facc = fcur;
+                axacc = axcur.clone();
                 k = 1;
 
                 if (facc < fopt) {
@@ -108,6 +114,7 @@ public class BalancedPMedianVNS implements Solver {
                     xidxopt = xidxacc.clone();
                     c1opt = c1acc.clone();
                     c2opt = c2acc.clone();
+                    axopt = axacc.clone();
                     changes++;
                     if (changes >= MAX_SOLUTION_CHANGES) {
                         LOGGER.info("Max solution changes limit hit.");
@@ -121,6 +128,7 @@ public class BalancedPMedianVNS implements Solver {
                 xidxcur = xidxacc.clone();
                 c1cur = c1acc.clone();
                 c2cur = c2acc.clone();
+                axcur = axacc.clone();
                 k = k + 1;
             }
 
@@ -134,7 +142,7 @@ public class BalancedPMedianVNS implements Solver {
         for (int i=0; i<n; i++)
             supermedians[i] = (c1opt[i] == i) ? i : Solution.NO_SUPERMEDIAN;
 
-        return new Solution(periods, c1opt, supermedians, fopt, time);
+        return new Solution(periods, axopt, supermedians, fopt, time);
     }
 
     private boolean accept(double opt, double cur, double temperature) {

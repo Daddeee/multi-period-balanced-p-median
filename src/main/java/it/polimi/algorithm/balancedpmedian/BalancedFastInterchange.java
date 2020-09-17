@@ -1,6 +1,7 @@
 package it.polimi.algorithm.balancedpmedian;
 
 import it.polimi.util.Pair;
+import it.polimi.util.Triple;
 
 public class BalancedFastInterchange {
 
@@ -18,26 +19,30 @@ public class BalancedFastInterchange {
         this.avg = avg;
     }
 
-    public double fastInterchange(int[] xopt, int[] xidx, int[] c1, int[] c2, double fopt) {
+    public double fastInterchange(int[] xopt, int[] xidx, int[] ax, int[] c1, int[] c2, double fopt) {
         while(true) {
             // find optimal goin and gout
             double wopt = Float.MAX_VALUE;
             int goinopt = -1, gooutopt = -1;
+            int[] axopt = new int[0];
             for (int i=p; i < n; i++) {
                 int goin = xopt[i];
-                Pair<Integer, Double> pair = move(xopt, xidx, c1, c2, goin);
-                int goout = pair.getFirst();
-                double w = pair.getSecond();
+                Triple<Integer, Double, int[]> triple = move(xopt, xidx, c1, c2, goin);
+                double w = triple.getSecond();
                 if (w < wopt) {
                     wopt = w;
                     goinopt = goin;
-                    gooutopt = goout;
+                    gooutopt = triple.getFirst();
+                    axopt = triple.getThird();
                 }
             }
 
             // no improvement found
-            if (wopt >= 0)
+            if (wopt >= 0) {
+                for (int i=0; i<axopt.length; i++)
+                    ax[i] = axopt[i];
                 return fopt;
+            }
 
             // update obj function
             fopt = wopt;
@@ -53,7 +58,7 @@ public class BalancedFastInterchange {
         }
     }
 
-    public Pair<Integer, Double> move(int[] x, int[] xidx, int[] c1, int[] c2, int goin) {
+    public Triple<Integer, Double, int[]> move(int[] x, int[] xidx, int[] c1, int[] c2, int goin) {
         int[][] nc1 = new int[p][n];
         int[][] counts = new int[p][p];
         int[] goincounts = new int[p];
@@ -145,6 +150,7 @@ public class BalancedFastInterchange {
 
         double zopt = Double.MAX_VALUE;
         int goout = -1;
+        int[] ax = new int[0];
         for (int i=0; i<p; i++) {
             double zdist = 0;
             double zavg = 0;
@@ -163,15 +169,17 @@ public class BalancedFastInterchange {
             if (z < zopt) {
                 zopt = z;
                 goout = i;
+                ax = nc1[i];
             }
         }
 
-        return new Pair<>(x[goout], zopt);
+        return new Triple<>(x[goout], zopt, ax);
     }
 
-    public void update(int[]x,  int[] c1, int[] c2, int goin, int goout) {
+    public void update(int[]x, int[] c1, int[] c2, int goin, int goout) {
         // updates c1 and c2 for each location by replacing goout with goin
         for (int i=0; i<n; i++) {
+
             // if goout is current median
             if (c1[i] == goout) {
                 // if goin is closer to i than the second median c2[i]

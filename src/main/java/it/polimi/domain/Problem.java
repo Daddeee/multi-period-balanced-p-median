@@ -2,10 +2,13 @@ package it.polimi.domain;
 
 import it.polimi.distances.Distance;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Problem {
+    private final List<Service> services;
+
     private final int n;
     private final int p;
     private final int m;
@@ -17,6 +20,7 @@ public class Problem {
     private int kmax;
 
     public Problem(List<Service> services, int numPeriods, int numMedians, Distance distance) {
+        this.services = services;
         this.n = services.size();
         this.p = numMedians;
         this.m = numPeriods;
@@ -29,6 +33,7 @@ public class Problem {
     }
 
     public Problem(int n, int p, float[][] c) {
+        this.services = null;
         this.n = n;
         this.p = p;
         this.c = c;
@@ -40,6 +45,10 @@ public class Problem {
         this.avg = (double) n/p;
         this.alpha = computeAlpha();
         this.kmax = p;
+    }
+
+    public List<Service> getServices() {
+        return services;
     }
 
     public int getN() {

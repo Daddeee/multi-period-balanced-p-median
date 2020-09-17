@@ -40,13 +40,13 @@ public class MultiPeriodBalancedPMedianTest {
             n[i] = problem.getN();
             p[i] = problem.getP();
             m[i] = problem.getM();
-            opt[i] = exactSolution.getObjective();
+            //opt[i] = exactSolution.getObjective();
             heu[i] = vndsSolution.getObjective();
-            opttime[i] = exactSolution.getElapsedTime();
+            //opttime[i] = exactSolution.getElapsedTime();
             heutime[i] = vndsSolution.getElapsedTime();
         }
 
-        TestCSVWriter.write("results/multiperiodbalancedpmedian/rand.csv", opt, heu, opttime, heutime, n, m, p);
+        TestCSVWriter.write("results/multiperiodbalancedpmedian/rand-tmp.csv", opt, heu, opttime, heutime, n, m, p);
     }
 
     private String[] getFiles(String baseDir) {

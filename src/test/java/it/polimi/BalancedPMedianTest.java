@@ -1,9 +1,6 @@
 package it.polimi;
 
-import it.polimi.algorithm.balancedpmedian.BalancedPMedianExact;
 import it.polimi.algorithm.balancedpmedian.BalancedPMedianVNS;
-import it.polimi.algorithm.balancedpmedian.alns.BalancedPMedianALNS;
-import it.polimi.algorithm.pmedian.PMedianVNS;
 import it.polimi.domain.Problem;
 import it.polimi.domain.Solution;
 import it.polimi.io.reader.ORLIBReader;
@@ -28,7 +25,7 @@ public class BalancedPMedianTest {
 
         int tries = 10;
 
-        int from = 1, to = 1;
+        int from = 1, to = 9;
         for (int i=from; i<=to; i++) {
             String path = String.format(basePath, i);
             Problem problem = ORLIBReader.read(path);
