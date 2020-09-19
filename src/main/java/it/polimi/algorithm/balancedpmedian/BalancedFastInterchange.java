@@ -38,7 +38,7 @@ public class BalancedFastInterchange {
             }
 
             // no improvement found
-            if (wopt >= 0) {
+            if (wopt - fopt >= 0) {
                 for (int i=0; i<axopt.length; i++)
                     ax[i] = axopt[i];
                 return fopt;
@@ -100,7 +100,7 @@ public class BalancedFastInterchange {
             for (int j=0; j<n; j++) {
                 int jmed = nc1[i][j];
                 int jmedcount = jmed == goin ? goincounts[i] : counts[i][xidx[jmed]];
-                if (jmedcount > avg) {
+                if (jmedcount > avg && jmed != j) {
                     // gain in the objective function due to removing j from jmed
                     double removalGain = d[j][jmed];
                     removalGain += alpha * Math.min(jmedcount - avg, 1);

@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Random;
 
 public class BalancedPMedianVNS implements Solver {
-    protected final int MAX_SOLUTION_CHANGES = 100;
+    protected final int MAX_SOLUTION_CHANGES = 1000;
     private final Logger LOGGER = LoggerFactory.getLogger(BalancedPMedianVNS.class);
     private final Random random;
 
@@ -96,7 +96,7 @@ public class BalancedPMedianVNS implements Solver {
             }
 
             // Local search
-            fcur = bfi.fastInterchange(xcur, xidxcur, axcur, c1cur, c2cur, fcur);
+            //fcur = bfi.fastInterchange(xcur, xidxcur, axcur, c1cur, c2cur, fcur);
 
             // Move or not
             if (accept(facc, fcur, temperature)) {

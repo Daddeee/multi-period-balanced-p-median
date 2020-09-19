@@ -8,7 +8,10 @@ import it.polimi.io.reader.RandReader;
 import it.polimi.io.writer.TestCSVWriter;
 import org.junit.Test;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Arrays;
 
 public class MultiPeriodBalancedPMedianTest {
@@ -18,8 +21,11 @@ public class MultiPeriodBalancedPMedianTest {
         String[] files = getFiles(basePath);
         Arrays.sort(files);
 
+        //String basePath = "instances/";
+        //String[] files = { "n2000p5t5.csv" };
+
         int numInstances = files.length;
-        double[] opt = new double[numInstances];
+        double[] opt = readopt();
         int[] n = new int[numInstances];
         int[] p = new int[numInstances];
         int[] m = new int[numInstances];
@@ -31,16 +37,16 @@ public class MultiPeriodBalancedPMedianTest {
             String filePath = basePath + files[i];
             Problem problem = RandReader.read(filePath);
 
-            Exact exact = new Exact();
-            Solution exactSolution = exact.run(problem);
+            //Exact exact = new Exact();
+            //Solution exactSolution = exact.run(problem);
 
-            VNDS vnds = new VNDS();
+            VNDS vnds = new VNDS(1337);
             Solution vndsSolution = vnds.run(problem);
 
             n[i] = problem.getN();
             p[i] = problem.getP();
             m[i] = problem.getM();
-            //opt[i] = exactSolution.getObjective();
+            //opt[i]
             heu[i] = vndsSolution.getObjective();
             //opttime[i] = exactSolution.getElapsedTime();
             heutime[i] = vndsSolution.getElapsedTime();
@@ -52,5 +58,26 @@ public class MultiPeriodBalancedPMedianTest {
     private String[] getFiles(String baseDir) {
         File directoryPath = new File(baseDir);
         return directoryPath.list();
+    }
+
+    private static double[] readopt() {
+        try {
+            double[] opt = new double[10];
+            BufferedReader reader = new BufferedReader(new FileReader("results/multiperiodbalancedpmedian/opt.csv"));
+            reader.readLine();
+            String line = reader.readLine();
+            int count = 0;
+            while (line != null && line.length() > 0) {
+                line = line.trim();
+                String[] splitted = line.split("\\s+");
+                opt[count] = Double.parseDouble(splitted[3]);
+                count++;
+                line = reader.readLine();
+            }
+            reader.close();
+            return opt;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

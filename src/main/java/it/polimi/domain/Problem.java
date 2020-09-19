@@ -117,6 +117,6 @@ public class Problem {
         int count = 0;
         for (int i=0; i<n; i++)
             count += (d[i] - r[i] == 0) ? 0 : 1;
-        return Math.max(1, count);
+        return Math.max(1, Math.min(count/5, 100));
     }
 }

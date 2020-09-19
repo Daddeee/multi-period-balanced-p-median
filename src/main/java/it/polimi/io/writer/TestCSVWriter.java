@@ -60,8 +60,9 @@ public class TestCSVWriter {
     public static void write(String filepath, double[] opt, double[] res, double[] opttime, double[] restime, int[] n,
                              int[] m, int[] p) {
         try {
-            double[] err = new double[opt.length];
-            for (int i=0; i<err.length; i++)
+            int len = Math.min(res.length, opt.length);
+            double[] err = new double[len];
+            for (int i=0; i<len; i++)
                 err[i] = 100*(res[i] - opt[i])/opt[i];
 
             File solutionFile = new File(filepath);
@@ -74,7 +75,7 @@ public class TestCSVWriter {
 
             writer.write(String.format(formatRow, "N", "M", "P", "Opt", "Res", "Err", "Opt. Time", "Res. Time"));
 
-            for (int i=0; i<opt.length; i++) {
+            for (int i=0; i<len; i++) {
                 writer.write(String.format(formatRow, n[i], m[i], p[i], String.format("%.2f", opt[i]),
                         String.format("%.2f", res[i]), String.format("%.2f%%", err[i]),
                         String.format("%.2fms", opttime[i]), String.format("%.2fms", restime[i])));
