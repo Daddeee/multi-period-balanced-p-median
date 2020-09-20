@@ -1,0 +1,29 @@
+reset;
+reset options;
+
+model balanced-p-median.mod;
+
+data balanced-p-median.dat;
+
+option solver "../ampl_linux-intel64/cplex";
+
+option cplex_options 'threads=1 time=3600';
+
+problem BPMP: x, y, distance_and_displacement, exclusive_assignment, number_of_medians, assign_to_medians_only,
+            abs_1, abs_2;
+
+param tic;
+param toc;
+param MILP_time;
+
+let tic := _ampl_user_time;
+
+printf "\bn=%d p=%d t=%d", n, p, m;
+
+solve BPMP;
+
+let toc := _ampl_user_time + _total_solve_user_time;
+
+let MILP_time := toc - tic;
+
+printf "%g", MILP_time > ../time.txt;

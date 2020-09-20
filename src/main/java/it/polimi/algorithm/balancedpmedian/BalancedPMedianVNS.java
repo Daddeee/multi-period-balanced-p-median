@@ -3,7 +3,6 @@ package it.polimi.algorithm.balancedpmedian;
 import it.polimi.algorithm.Solver;
 import it.polimi.domain.Problem;
 import it.polimi.domain.Solution;
-import it.polimi.util.Pair;
 import it.polimi.util.Rand;
 import it.polimi.util.Triple;
 import org.slf4j.Logger;
@@ -14,7 +13,7 @@ import java.util.Map;
 import java.util.Random;
 
 public class BalancedPMedianVNS implements Solver {
-    protected final int MAX_SOLUTION_CHANGES = 1000;
+    protected final int MAX_RESTART_WITHOUT_IMPROVEMENTS = 3;
     private final Logger LOGGER = LoggerFactory.getLogger(BalancedPMedianVNS.class);
     private final Random random;
 
@@ -49,91 +48,89 @@ public class BalancedPMedianVNS implements Solver {
         double fopt = computeObjectiveFunction(c1opt, n, d, alpha, avg);
         int[] axopt = c1opt.clone();
 
-        // accepted values
-        int[] xacc = xopt.clone();
-        int[] xidxacc = xidxopt.clone();
-        int[] c1acc = c1opt.clone();
-        int[] c2acc = c2opt.clone();
-        double facc = fopt;
-        int[] axacc = axopt.clone();
+        int count = 0;
+        do {
+            // accepted values
+            int[] xacc = xopt.clone();
+            int[] xidxacc = xidxopt.clone();
+            int[] c1acc = c1opt.clone();
+            int[] c2acc = c2opt.clone();
+            double facc = fopt;
+            int[] axacc = axopt.clone();
 
-        // current values
-        int[] xcur = xopt.clone();
-        int[] xidxcur = xidxopt.clone();
-        int[] c1cur = c1opt.clone();
-        int[] c2cur = c2opt.clone();
-        double fcur = fopt;
-        int[] axcur = axopt.clone();
+            // current values
+            int[] xcur = xopt.clone();
+            int[] xidxcur = xidxopt.clone();
+            int[] c1cur = c1opt.clone();
+            int[] c2cur = c2opt.clone();
+            double fcur = fopt;
+            int[] axcur = axopt.clone();
 
-        double temperature = getInitialTemperature(fcur);
-        double cooling = 0.995;
+            double temperature = getInitialTemperature(fcur);
+            double cooling = 0.995;
 
-        BalancedFastInterchange bfi = new BalancedFastInterchange(n, p, d, alpha, avg);
+            BalancedFastInterchange bfi = new BalancedFastInterchange(n, p, d, alpha, avg);
+            int k = 1;
+            while (k <= kmax) {
+                // shaking
+                for (int j = 1; j <= k; j++) {
+                    // sample random median to be inserted
+                    int goin = xcur[random.nextInt(n - p) + p];
 
-        int k = 1;
-        int changes = 0;
-        while (k <= kmax) {
-            // shaking
-            for (int j = 1; j <= k; j++) {
-                // sample random median to be inserted
-                int goin = xcur[random.nextInt(n - p) + p];
+                    // find best median to remove
+                    Triple<Integer, Double, int[]> triple = bfi.move(xcur, xidxcur, c1cur, c2cur, goin);
+                    int goout = triple.getFirst();
+                    fcur = triple.getSecond();
+                    axcur = triple.getThird();
 
-                // find best median to remove
-                Triple<Integer, Double, int[]> triple = bfi.move(xcur, xidxcur, c1cur, c2cur, goin);
-                int goout = triple.getFirst();
-                fcur = triple.getSecond();
-                axcur = triple.getThird();
+                    // update xcur and xidx
+                    int outidx = xidxcur[goout], inidx = xidxcur[goin];
+                    xcur[outidx] = goin;
+                    xcur[inidx] = goout;
+                    xidxcur[goin] = outidx;
+                    xidxcur[goout] = inidx;
 
-                // update xcur and xidx
-                int outidx = xidxcur[goout], inidx = xidxcur[goin];
-                xcur[outidx] = goin;
-                xcur[inidx] = goout;
-                xidxcur[goin] = outidx;
-                xidxcur[goout] = inidx;
-
-                // update c1 and c2
-                bfi.update(xcur, c1cur, c2cur, goin, goout);
-            }
-
-            // Local search
-            //fcur = bfi.fastInterchange(xcur, xidxcur, axcur, c1cur, c2cur, fcur);
-
-            // Move or not
-            if (accept(facc, fcur, temperature)) {
-                xacc = xcur.clone();
-                xidxacc = xidxcur.clone();
-                c1acc = c1cur.clone();
-                c2acc = c2cur.clone();
-                facc = fcur;
-                axacc = axcur.clone();
-                k = 1;
-
-                if (facc < fopt) {
-                    fopt = facc;
-                    xopt = xacc.clone();
-                    xidxopt = xidxacc.clone();
-                    c1opt = c1acc.clone();
-                    c2opt = c2acc.clone();
-                    axopt = axacc.clone();
-                    changes++;
-                    if (changes >= MAX_SOLUTION_CHANGES) {
-                        LOGGER.info("Max solution changes limit hit.");
-                        break;
-                    }
+                    // update c1 and c2
+                    bfi.update(xcur, c1cur, c2cur, goin, goout);
                 }
 
-            } else {
-                fcur = facc;
-                xcur = xacc.clone();
-                xidxcur = xidxacc.clone();
-                c1cur = c1acc.clone();
-                c2cur = c2acc.clone();
-                axcur = axacc.clone();
-                k = k + 1;
-            }
+                // Local search
+                //fcur = bfi.fastInterchange(xcur, xidxcur, axcur, c1cur, c2cur, fcur);
 
-            temperature = temperature*cooling;
-        }
+                // Move or not
+                if (accept(facc, fcur, temperature)) {
+                    xacc = xcur.clone();
+                    xidxacc = xidxcur.clone();
+                    c1acc = c1cur.clone();
+                    c2acc = c2cur.clone();
+                    facc = fcur;
+                    axacc = axcur.clone();
+                    k = 1;
+
+                    if (facc < fopt) {
+                        fopt = facc;
+                        xopt = xacc.clone();
+                        xidxopt = xidxacc.clone();
+                        c1opt = c1acc.clone();
+                        c2opt = c2acc.clone();
+                        axopt = axacc.clone();
+                    }
+
+                } else {
+                    fcur = facc;
+                    xcur = xacc.clone();
+                    xidxcur = xidxacc.clone();
+                    c1cur = c1acc.clone();
+                    c2cur = c2acc.clone();
+                    axcur = axacc.clone();
+                    k = k + 1;
+                }
+
+                temperature = temperature*cooling;
+            }
+            count++;
+            LOGGER.info("Restarting. best=" + fopt + " count=" + count);
+        } while (count < MAX_RESTART_WITHOUT_IMPROVEMENTS);
 
         double end = System.nanoTime();
         double time = (end - start) / 1e6;
@@ -142,12 +139,14 @@ public class BalancedPMedianVNS implements Solver {
         for (int i=0; i<n; i++)
             supermedians[i] = (c1opt[i] == i) ? i : Solution.NO_SUPERMEDIAN;
 
+        LOGGER.info("Completed! Solution cost=" + fopt + "\n");
+
         return new Solution(periods, axopt, supermedians, fopt, time);
     }
 
     private boolean accept(double opt, double cur, double temperature) {
         double prob = Math.exp(-(cur - opt)/temperature);
-        return random.nextDouble() < prob;
+        return opt != cur && random.nextDouble() < prob;
     }
 
     private double getInitialTemperature(double obj) {

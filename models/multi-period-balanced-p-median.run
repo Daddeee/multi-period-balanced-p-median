@@ -1,0 +1,30 @@
+reset;
+reset options;
+
+model multi-period-balanced-p-median.mod;
+
+data multi-period-balanced-p-median.dat;
+
+option solver "../ampl_linux-intel64/cplex";
+
+option cplex_options 'threads=1 time=3600';
+
+problem MPBPMP: x, y, w, z, distance_and_displacement, exclusive_assignment_in_valid_period, forbidden_assignent_outside_valid_periods,
+    number_of_medians_per_period, assign_to_medians_only, abs_1, abs_2, assign_to_supermedian_in_valid_periods, number_of_supermedians,
+    assign_to_supermedians_only, supermedian_has_one_median_in_each_period, define_z_1, define_z_2, define_z_3;
+
+param tic;
+param toc;
+param MILP_time;
+
+let tic := _ampl_user_time;
+
+display "n=" + n + " p=" + p + "t=" + m + "===="
+
+solve MPBPMP;
+
+let toc := _ampl_user_time + _total_solve_user_time;
+
+let MILP_time := toc - tic;
+
+printf "%g", MILP_time > ../time.txt;

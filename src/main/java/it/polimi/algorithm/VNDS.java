@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class VNDS implements Solver {
-    protected final int MAX_SOLUTION_CHANGES = 100;
+    protected final int MAX_RESTART_WITHOUT_IMPROVEMENTS = 10;
     private final Logger LOGGER = LoggerFactory.getLogger(VNDS.class);
     private final Random random;
 
@@ -35,53 +35,72 @@ public class VNDS implements Solver {
 
         Solution opt = getInitial(problem);
 
-        Solution cur = opt.clone();
-        int k = 1;
-        int changes = 0;
-        List<Integer> shakable = IntStream.range(0, problem.getN())
-                .filter(i -> problem.getD()[i] - problem.getR()[i] > 0).boxed().collect(Collectors.toList());
-        while (k <= problem.getKmax()) {
-            Collections.shuffle(shakable, random);
-            Set<Integer> touchedPeriods = new HashSet<>();
-            // shaking
-            for (int j = 0; j < k; j++) {
-                if (shakable.size() <= 0) break;
-                int toSwap = shakable.get(j);
-                int oldPeriod = cur.getPeriods()[toSwap];
-                // using random insertion
-                int insertionPeriod = problem.getR()[toSwap] + random.nextInt(problem.getD()[toSwap] - problem.getR()[toSwap] + 1);
-                while (insertionPeriod == cur.getPeriods()[toSwap])
-                    insertionPeriod = problem.getR()[toSwap] + random.nextInt(problem.getD()[toSwap] - problem.getR()[toSwap] + 1);
-                touchedPeriods.add(oldPeriod);
-                touchedPeriods.add(insertionPeriod);
-                // do not care about updating medians or objectives there
-                cur.setPeriod(toSwap, insertionPeriod);
-            }
+        int count = 0;
+        do {
+            Solution acc = opt.clone();
+            Solution cur = opt.clone();
+            int k = 1;
+            List<Integer> shakable = IntStream.range(0, problem.getN())
+                    .filter(i -> problem.getD()[i] - problem.getR()[i] > 0).boxed().collect(Collectors.toList());
+            double temperature = getInitialTemperature(cur.getObjective());
+            double cooling = 0.995;
+            while (k <= problem.getKmax()) {
+                Collections.shuffle(shakable, random);
+                Set<Integer> touchedPeriods = new HashSet<>();
+                // shaking
+                for (int j = 0; j < k; j++) {
+                    if (shakable.size() <= 0) break;
+                    int toSwap = shakable.get(j);
+                    int oldPeriod = cur.getPeriods()[toSwap];
 
-            // local search
-            for (int period : touchedPeriods) {
-                solveSinglePeriod(cur, problem, period);
-            }
+                    // using best insertion
+                    int insertionPeriod = oldPeriod, bestCnt = Integer.MAX_VALUE;
+                    for (int i=problem.getR()[toSwap]; i<= problem.getD()[toSwap]; i++) {
+                        if (i == oldPeriod) continue;
+                        int cnt = cur.getPointsInPeriod(i).size();
+                        if (cnt < bestCnt) {
+                            bestCnt = cnt;
+                            insertionPeriod = i;
+                        }
+                    }
 
-            // Move or not
-            if (cur.getObjective() < opt.getObjective()) {
-                opt = cur.clone();
-                k = 1;
-                changes++;
-                if (changes >= MAX_SOLUTION_CHANGES) {
-                    LOGGER.info("Max solution changes limit hit.");
-                    break;
+                    touchedPeriods.add(oldPeriod);
+                    touchedPeriods.add(insertionPeriod);
+                    // do not care about updating medians or objectives there
+                    cur.setPeriod(toSwap, insertionPeriod);
                 }
-            } else {
-                cur = opt.clone();
-                k = k + 1;
+
+                // local search
+                for (int period : touchedPeriods) {
+                    solveSinglePeriod(cur, problem, period);
+                }
+
+                // Move or not
+                if (accept(acc.getObjective(), cur.getObjective(), temperature)) {
+                    acc = cur.clone();
+                    k = 1;
+                    temperature = temperature*cooling;
+                    if (acc.getObjective() < opt.getObjective()) {
+                        LOGGER.info("New optimum! cost=" + cur.getObjective() + " k=" + k);
+                        opt = acc.clone();
+                    }
+                } else {
+                    cur = acc.clone();
+                    k = k + 1;
+                }
             }
-        }
+            count++;
+            LOGGER.info("No improvement founds. best=" + opt.getObjective() + " count=" + count);
+        } while (count < MAX_RESTART_WITHOUT_IMPROVEMENTS);
         double end = System.nanoTime();
         double elapsedTime = (end - start) / 1e6;
         opt.setElapsedTime(elapsedTime);
 
+        LOGGER.info("Solved vnds. elapsed_time=" + elapsedTime + " cost=" + opt.getObjective());
+
         solveSuperMedians(opt, problem);
+
+        LOGGER.info("Completed! Solution cost=" + opt.getObjective() + "\n");
 
         return opt;
     }
@@ -94,8 +113,17 @@ public class VNDS implements Solver {
         List<Integer> medianPoints = new ArrayList<>();
         List<Integer> medianPeriods = new ArrayList<>();
         Collections.shuffle(points, random);
-        int period = 0;
-        for (List<Integer> periodPoints : Lists.partition(points, periodSize)) {
+
+        Map<Integer, List<Integer>> periodPointsMap = new HashMap<>();
+        for (int i=0; i<problem.getN(); i++) {
+            int insertionPeriod = problem.getR()[i] + random.nextInt(problem.getD()[i] - problem.getR()[i] + 1);
+            List<Integer> periodPoints = periodPointsMap.getOrDefault(insertionPeriod, new ArrayList<>());
+            periodPoints.add(i);
+            periodPointsMap.put(insertionPeriod, periodPoints);
+        }
+
+        for (int period = 0; period < problem.getM(); period++) {
+            List<Integer> periodPoints = periodPointsMap.get(period);
             for (int i=0; i<periodPoints.size(); i++) {
                 int pi = periodPoints.get(i);
                 periods[pi] = period;
@@ -110,7 +138,6 @@ public class VNDS implements Solver {
                 medianPoints.add(periodPoints.get(labels[i]));
                 medianPeriods.add(period);
             }
-            period += 1;
         }
 
         int[] supermedians = new int[problem.getN()];
@@ -209,5 +236,15 @@ public class VNDS implements Solver {
             encoded[i][arr.get(i)] = 1;
         }
         return encoded;
+    }
+
+    private double getInitialTemperature(double obj) {
+        double w = 0.05;
+        return w*obj / Math.log(2);
+    }
+
+    private boolean accept(double opt, double cur, double temperature) {
+        double prob = Math.exp(-(cur - opt)/temperature);
+        return random.nextDouble() < prob;
     }
 }
