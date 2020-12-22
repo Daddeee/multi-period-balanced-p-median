@@ -1,0 +1,42 @@
+Solving n100p10t2.csv
+[main] INFO it.polimi.algorithm.VNDS - Solved vnds. elapsed_time=27564.33238 cost=1062.23483812809
+HighLevelPMedian elapsed time: 34.760342
+[main] INFO it.polimi.algorithm.VNDS - Completed! Solution cost=1274.5723186731339
+
+Done. time=27564.33238, cost=1274.5723186731339
+Solving n100p10t3.csv
+[main] INFO it.polimi.algorithm.VNDS - Solved vnds. elapsed_time=56085.383615 cost=948.733648856481
+HighLevelPMedian elapsed time: 47.827061
+[main] INFO it.polimi.algorithm.VNDS - Completed! Solution cost=1298.068829615911
+
+Done. time=56085.383615, cost=1298.068829615911
+Solving n100p10t4.csv
+[main] INFO it.polimi.algorithm.VNDS - Solved vnds. elapsed_time=57896.673451 cost=881.6493314504623
+HighLevelPMedian elapsed time: 61.711462
+[main] INFO it.polimi.algorithm.VNDS - Completed! Solution cost=1474.0129560232162
+
+Done. time=57896.673451, cost=1474.0129560232162
+Solving n100p10t5.csv
+[main] INFO it.polimi.algorithm.VNDS - Solved vnds. elapsed_time=35920.916004 cost=678.3509660959244
+HighLevelPMedian elapsed time: 122.848769
+[main] INFO it.polimi.algorithm.VNDS - Completed! Solution cost=1279.3402272462845
+
+Done. time=35920.916004, cost=1279.3402272462845
+Solving n100p20t2.csv
+[main] INFO it.polimi.algorithm.VNDS - Solved vnds. elapsed_time=177691.16877 cost=674.3359162807465
+HighLevelPMedian elapsed time: 82.414118
+[main] INFO it.polimi.algorithm.VNDS - Completed! Solution cost=1099.9911696910858
+
+Done. time=177691.16877, cost=1099.9911696910858
+Solving n100p20t3.csv
+[main] INFO it.polimi.algorithm.VNDS - Solved vnds. elapsed_time=520795.585184 cost=620.4271748065948
+HighLevelPMedian elapsed time: 113.0782
+[main] INFO it.polimi.algorithm.VNDS - Completed! Solution cost=1162.331930398941
+
+Done. time=520795.585184, cost=1162.331930398941
+Solving n100p20t4.csv
+[main] INFO it.polimi.algorithm.VNDS - Solved vnds. elapsed_time=402031.590934 cost=425.9560022354126
+HighLevelPMedian elapsed time: 155.40123
+[main] INFO it.polimi.algorithm.VNDS - Completed! Solution cost=1278.9631543159485
+
+Done. time=402031.590934, cost=1278.9631543159485

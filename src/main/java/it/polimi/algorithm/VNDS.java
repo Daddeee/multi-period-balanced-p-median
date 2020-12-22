@@ -1,7 +1,6 @@
 package it.polimi.algorithm;
 
-import com.google.common.collect.Lists;
-import it.polimi.algorithm.balancedpmedian.BalancedPMedianVNS;
+import it.polimi.algorithm.balancedpmedian.BalancedPMedianRVNS;
 import it.polimi.algorithm.highlevelpmedian.HighLevelPMedian;
 import it.polimi.domain.Solution;
 import it.polimi.domain.Problem;
@@ -13,7 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class VNDS implements Solver {
-    protected final int MAX_RESTART_WITHOUT_IMPROVEMENTS = 10;
+    protected final int MAX_RESTART_WITHOUT_IMPROVEMENTS = 3;
     private final Logger LOGGER = LoggerFactory.getLogger(VNDS.class);
     private final Random random;
 
@@ -40,24 +39,28 @@ public class VNDS implements Solver {
             Solution acc = opt.clone();
             Solution cur = opt.clone();
             int k = 1;
-            List<Integer> shakable = IntStream.range(0, problem.getN())
-                    .filter(i -> problem.getD()[i] - problem.getR()[i] > 0).boxed().collect(Collectors.toList());
             double temperature = getInitialTemperature(cur.getObjective());
             double cooling = 0.995;
             while (k <= problem.getKmax()) {
+                List<Integer> shakable = IntStream.range(0, problem.getN())
+                        .filter(i -> problem.getD()[i] - problem.getR()[i] > 0)
+                        .boxed().collect(Collectors.toList());
                 Collections.shuffle(shakable, random);
                 Set<Integer> touchedPeriods = new HashSet<>();
                 // shaking
-                for (int j = 0; j < k; j++) {
+                int j = 0;
+                while (j < k) {
                     if (shakable.size() <= 0) break;
-                    int toSwap = shakable.get(j);
+                    int toSwap = shakable.remove(0);
                     int oldPeriod = cur.getPeriods()[toSwap];
-
+                    if (cur.getPointsInPeriod(oldPeriod).size() <= problem.getP() + 1)
+                        continue;
                     // using best insertion
                     int insertionPeriod = oldPeriod, bestCnt = Integer.MAX_VALUE;
                     for (int i=problem.getR()[toSwap]; i<= problem.getD()[toSwap]; i++) {
                         if (i == oldPeriod) continue;
                         int cnt = cur.getPointsInPeriod(i).size();
+                        if (cnt <= problem.getP()) continue;
                         if (cnt < bestCnt) {
                             bestCnt = cnt;
                             insertionPeriod = i;
@@ -68,6 +71,7 @@ public class VNDS implements Solver {
                     touchedPeriods.add(insertionPeriod);
                     // do not care about updating medians or objectives there
                     cur.setPeriod(toSwap, insertionPeriod);
+                    j++;
                 }
 
                 // local search
@@ -108,7 +112,6 @@ public class VNDS implements Solver {
     public Solution getInitial(Problem problem) {
         int[] periods = new int[problem.getN()];
         int[] medians = new int[problem.getN()];
-        int periodSize = (int) Math.ceil((double) problem.getN() / problem.getM());
         List<Integer> points = IntStream.range(0, problem.getN()).boxed().collect(Collectors.toList());
         List<Integer> medianPoints = new ArrayList<>();
         List<Integer> medianPeriods = new ArrayList<>();
@@ -116,10 +119,17 @@ public class VNDS implements Solver {
 
         Map<Integer, List<Integer>> periodPointsMap = new HashMap<>();
         for (int i=0; i<problem.getN(); i++) {
-            int insertionPeriod = problem.getR()[i] + random.nextInt(problem.getD()[i] - problem.getR()[i] + 1);
-            List<Integer> periodPoints = periodPointsMap.getOrDefault(insertionPeriod, new ArrayList<>());
+            int bestPeriod = problem.getR()[i];
+            int bestCost = periodPointsMap.getOrDefault(bestPeriod, new ArrayList<>()).size();
+            for (int j=problem.getR()[i] + 1; j<=problem.getD()[i]; j++) {
+                int insertionPeriod = j;
+                int cost = periodPointsMap.getOrDefault(insertionPeriod, new ArrayList<>()).size();
+                if (cost < bestCost)
+                    bestPeriod = insertionPeriod;
+            }
+            List<Integer> periodPoints = periodPointsMap.getOrDefault(bestPeriod, new ArrayList<>());
             periodPoints.add(i);
-            periodPointsMap.put(insertionPeriod, periodPoints);
+            periodPointsMap.put(bestPeriod, periodPoints);
         }
 
         for (int period = 0; period < problem.getM(); period++) {
@@ -130,7 +140,7 @@ public class VNDS implements Solver {
             }
             float[][] dist = getDist(problem, periodPoints);
             Problem periodProblem = new Problem(periodPoints.size(), problem.getP(), dist);
-            BalancedPMedianVNS vns = new BalancedPMedianVNS(random);
+            BalancedPMedianRVNS vns = new BalancedPMedianRVNS(random);
             Solution periodSolution = vns.run(periodProblem);
             int[] labels = periodSolution.getMedians();
             for (int i=0; i<labels.length; i++) {
@@ -194,7 +204,7 @@ public class VNDS implements Solver {
 
         // solving the period
         Problem periodProblem = new Problem(periodPoints.size(), problem.getP(), dist);
-        BalancedPMedianVNS vns = new BalancedPMedianVNS(random);
+        BalancedPMedianRVNS vns = new BalancedPMedianRVNS(random);
         Solution periodSolution = vns.run(periodProblem);
         int[] labels = periodSolution.getMedians();
 

@@ -1,6 +1,9 @@
 package it.polimi.io.reader;
 
+import it.polimi.distances.Distance;
+import it.polimi.distances.Haversine;
 import it.polimi.domain.Location;
+import it.polimi.domain.Problem;
 import it.polimi.domain.Service;
 
 import java.io.BufferedReader;
@@ -12,15 +15,57 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.GregorianCalendar;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class SpeedyReader {
+
+    public static Problem read(String filepath) {
+        try {
+            Random random = new Random(1337);
+            List<Location> locations = new ArrayList<>();
+            List<Calendar> deliveryDates = new ArrayList<>();
+            String[] splt = filepath.split("/");
+            String filename = splt[splt.length-1];
+            int p = Integer.parseInt(filename.split("-")[1].split("d")[1].replaceAll("\\D+",""));
+            BufferedReader reader = new BufferedReader(new FileReader(filepath));
+            String line = reader.readLine();
+            int count = 0;
+            while (line != null) {
+                String[] splitted = line.split(",");
+                double lat = Double.parseDouble(splitted[0]);
+                double lng = Double.parseDouble(splitted[1]);
+                if (lat != 0 && lng != 0) {
+                    Location loc = new Location(Integer.toString(count), lat, lng);
+                    locations.add(loc);
+
+                    TemporalAccessor tacc = DateTimeFormatter.ISO_INSTANT.parse(splitted[2]);
+                    Instant instant = Instant.from(tacc);
+                    ZonedDateTime zdt = ZonedDateTime.ofInstant(instant, ZoneId.systemDefault());
+                    Calendar from = GregorianCalendar.from(zdt);
+                    deliveryDates.add(from);
+                    count++;
+                }
+                line = reader.readLine();
+            }
+            reader.close();
+            List<Integer> deliveryDays = parseReleaseDates(deliveryDates);
+            int m = deliveryDays.stream().max(Integer::compareTo).orElse(0) + 1;
+            List<Service> services = IntStream.range(0, locations.size()).mapToObj(i -> {
+                int releaseDate = random.nextInt(deliveryDays.get(i) + 1);
+                int dueDate = releaseDate + random.nextInt(m - releaseDate);
+                Location loc = locations.get(i);
+                return new Service(loc.getId(), loc, releaseDate, dueDate);
+            }).collect(Collectors.toList());
+            Distance distance = new Haversine(locations);
+            return new Problem(services, m, p, distance);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public List<Service> read(String branch, Calendar startDate, int t) {
         String dirPath = "instances/speedy/" + t + "/";

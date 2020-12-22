@@ -11,7 +11,7 @@ for f in folders:
         break;
 
     os.chdir(f + "/")
-    os.system("../ampl_linux-intel64/ampl multi-period-balanced-p-median.run")
+    os.system("../ampl_linux-intel64/ampl multi-period-balanced-p-median-old.run")
     os.chdir("..")
 
     file1 = open('time.txt', 'r')

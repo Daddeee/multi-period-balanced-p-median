@@ -1,0 +1,10 @@
+n=50 p=5 t=2 objective 783.8007275 time=8.91656
+n=50 p=5 t=3 objective 788.3143001 time=1032.81
+n=50 p=5 t=4 objective 817.4071567 time=446.112
+n=50 p=5 t=5 objective 790.9160431 time=542.27
+n=50 p=10 t=2 objective 611.5721013 time=44.5828
+n=50 p=10 t=3 objective 566.0557967 time=149.317
+n=50 p=10 t=4 objective 629.3441537 time=51.3992
+n=50 p=20 t=2 objective 518.4307934 time=50.760047
+n=100 p=5 t=2 objective 1617.572998 time=430.019
+n=100 p=5 t=3 out of time

@@ -15,7 +15,7 @@ public class Exact implements Solver {
     public Solution run(Problem problem) {
         AMPL ampl = new AMPL();
         try {
-            ampl.read("models/multi-period-balanced-p-median.mod");
+            ampl.read("models/multi-period-balanced-p-median-old.mod");
             ampl.readData("");
             ampl.setOption("solver", "cplex");
             ampl.setOption("cplex_options", "threads=1");

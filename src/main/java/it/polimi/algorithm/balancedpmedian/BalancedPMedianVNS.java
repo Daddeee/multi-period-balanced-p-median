@@ -13,8 +13,8 @@ import java.util.Map;
 import java.util.Random;
 
 public class BalancedPMedianVNS implements Solver {
-    protected final int MAX_RESTART_WITHOUT_IMPROVEMENTS = 3;
-    private final Logger LOGGER = LoggerFactory.getLogger(BalancedPMedianVNS.class);
+    public static int MAX_RESTART_WITHOUT_IMPROVEMENTS = 0;
+    private final Logger LOGGER = LoggerFactory.getLogger(BalancedPMedianRVNS.class);
     private final Random random;
 
     public BalancedPMedianVNS() {
@@ -69,7 +69,7 @@ public class BalancedPMedianVNS implements Solver {
             double temperature = getInitialTemperature(fcur);
             double cooling = 0.995;
 
-            BalancedFastInterchange bfi = new BalancedFastInterchange(n, p, d, alpha, avg);
+            NewBalancedFastInterchange bfi = new NewBalancedFastInterchange(n, p, d, alpha, avg);
             int k = 1;
             while (k <= kmax) {
                 // shaking
@@ -95,7 +95,7 @@ public class BalancedPMedianVNS implements Solver {
                 }
 
                 // Local search
-                //fcur = bfi.fastInterchange(xcur, xidxcur, axcur, c1cur, c2cur, fcur);
+                fcur = bfi.fastInterchange(xcur, xidxcur, axcur, c1cur, c2cur, fcur);
 
                 // Move or not
                 if (accept(facc, fcur, temperature)) {
@@ -129,7 +129,7 @@ public class BalancedPMedianVNS implements Solver {
                 temperature = temperature*cooling;
             }
             count++;
-            LOGGER.info("Restarting. best=" + fopt + " count=" + count);
+            //LOGGER.info("Restarting. best=" + fopt + " count=" + count);
         } while (count < MAX_RESTART_WITHOUT_IMPROVEMENTS);
 
         double end = System.nanoTime();
@@ -139,7 +139,7 @@ public class BalancedPMedianVNS implements Solver {
         for (int i=0; i<n; i++)
             supermedians[i] = (c1opt[i] == i) ? i : Solution.NO_SUPERMEDIAN;
 
-        LOGGER.info("Completed! Solution cost=" + fopt + "\n");
+        //LOGGER.info("Completed! Solution cost=" + fopt + "\n");
 
         return new Solution(periods, axopt, supermedians, fopt, time);
     }

@@ -86,4 +86,61 @@ public class TestCSVWriter {
             throw new RuntimeException(e);
         }
     }
+
+    public static void write(String filepath, double[] opt, double[] opttime, double[] costs, double[] avgs,
+            double[] bmeans, int[] n, int[] p) {
+        try {
+            int len =opt.length;
+
+            File solutionFile = new File(filepath);
+            solutionFile.getParentFile().mkdirs();
+            solutionFile.createNewFile();
+
+            BufferedWriter writer = new BufferedWriter(new FileWriter(solutionFile));
+
+            String formatRow = "%-10s %-10s %-10s %-10s %-10s %-10s %-10s%n";
+
+            writer.write(String.format(formatRow, "N", "P", "Opt", "Opt. Time", "Cost", "Avg", "B-Mean"));
+
+            for (int i=0; i<len; i++) {
+                writer.write(String.format(formatRow, n[i], p[i], String.format("%.4f", opt[i]),
+                        String.format("%.2f", opttime[i]), String.format("%.2f", costs[i]),
+                        String.format("%.2f", avgs[i]), String.format("%.2f", bmeans[i])));
+            }
+
+            writer.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void write(String filepath, double[] opt, double[] res, double[] opttime, double[] restime, int[] n,
+                             int[] p) {
+        try {
+            int len = Math.min(res.length, opt.length);
+            double[] err = new double[len];
+            for (int i=0; i<len; i++)
+                err[i] = 100*(res[i] - opt[i])/opt[i];
+
+            File solutionFile = new File(filepath);
+            solutionFile.getParentFile().mkdirs();
+            solutionFile.createNewFile();
+
+            BufferedWriter writer = new BufferedWriter(new FileWriter(solutionFile));
+
+            String formatRow = "%-10s %-10s %-10s %-10s %-10s %-10s %-10s%n";
+
+            writer.write(String.format(formatRow, "N", "P", "Opt", "Res", "Err", "Opt. Time", "Res. Time"));
+
+            for (int i=0; i<len; i++) {
+                writer.write(String.format(formatRow, n[i], p[i], String.format("%.2f", opt[i]),
+                        String.format("%.2f", res[i]), String.format("%.2f%%", err[i]),
+                        String.format("%.2fms", opttime[i]), String.format("%.2fms", restime[i])));
+            }
+
+            writer.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

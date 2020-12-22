@@ -11,10 +11,13 @@ set V := 0..n-1;
 # distance between each pair of customers
 param c {V,V} >= 0;
 
-# average number of customers for each territory
+param lambda; # weighted average
+
 param x_avg := n / p;
 
-param alpha; # avg dist
+param s1 := 1 / ( (n - p) * (max{i in V, j in V} c[i,j]) );
+
+param s2 := 1 / (p * x_avg);
 
 ### Variables ###
 
@@ -24,9 +27,8 @@ var y {V} >= 0;
 
 ### Objective ###
 
-minimize distance_and_displacement:
-        sum {i in V, j in V} c[i,j] * x[i,j]
-        + sum {i in V} alpha*y[i];
+minimize distance_and_unfairness:
+        lambda * s1 * (sum {i in V, j in V} c[i,j] * x[i,j]) + (1 - lambda) * s2 * (sum {i in V} y[i]);
 
 ### Constraints ###
 

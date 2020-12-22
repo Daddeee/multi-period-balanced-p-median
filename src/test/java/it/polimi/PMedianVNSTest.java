@@ -1,8 +1,6 @@
 package it.polimi;
 
-import it.polimi.algorithm.Exact;
-import it.polimi.algorithm.VNDS;
-import it.polimi.algorithm.balancedpmedian.BalancedPMedianVNS;
+import it.polimi.algorithm.balancedpmedian.BalancedPMedianRVNS;
 import it.polimi.algorithm.pmedian.PMedianVNS;
 import it.polimi.domain.Location;
 import it.polimi.domain.Problem;
@@ -19,7 +17,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.stream.Collectors;
 
 public class PMedianVNSTest {
 
@@ -32,7 +29,11 @@ public class PMedianVNSTest {
         double[] res = new double[opt.length];
         double[] times = new double[opt.length];
 
-        for (int i=1; i<=40; i++) {
+        int numInstances = 40;
+        double avgTime = 0.;
+        double avgGap = 0.;
+
+        for (int i=1; i<=numInstances; i++) {
             String path = String.format(basePath, i);
             Problem problem = ORLIBReader.read(path);
             PMedianVNS vns = new PMedianVNS();
@@ -45,10 +46,16 @@ public class PMedianVNSTest {
             p[i-1] = problem.getP();
             res[i-1] = solution.getObjective();
             times[i-1] = solution.getElapsedTime();
+
+            double diff = res[i-1] - opt[i-1];
+            avgGap += 100*diff/opt[i-1];
+            avgTime += times[i-1];
         }
 
         TestCSVWriter writer = new TestCSVWriter(n, p, opt, res, times);
         writer.write("results/pmedian/orlib.csv");
+        System.out.println("avg gap = " + avgGap/numInstances + "%");
+        System.out.println("avg time= " + avgTime/numInstances + "ms");
     }
 
     private static double[] readopt() {
@@ -74,22 +81,27 @@ public class PMedianVNSTest {
 
     @Test
     public void rand() {
+        /*
         String basePath = "instances/rand/pmed/";
         String[] files = getFiles(basePath);
         Arrays.sort(files);
+         */
+        String basePath = "instances/";
+        String[] files = { "n200p5t1.csv" };
 
         for (int i=0; i<files.length; i++) {
             String path = basePath + files[i];
             Problem problem = RandReader.read(path);
 
             //PMedianVNS vns = new PMedianVNS();
-            BalancedPMedianVNS vns = new BalancedPMedianVNS();
+            //BalancedPMedianRVNS vns = new BalancedPMedianRVNS();
+            PMedianVNS vns = new PMedianVNS();
             Solution solution = vns.run(problem);
 
             System.out.print(path);
             System.out.println(String.format(" res=%.2f time=%.2fms", solution.getObjective(), solution.getElapsedTime()));
 
-            ZonesCSVWriter.write("results/balancedpmedian/" + files[i],
+            ZonesCSVWriter.write("results/" + files[i],
                    problem.getServices().stream().map(Service::getLocation).toArray(Location[]::new), solution.getMedians());
         }
     }

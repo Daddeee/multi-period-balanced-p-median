@@ -4,9 +4,14 @@ from random import randrange
 x_max = 100
 y_max = 100
 
-ns = [50, 100, 150, 200]
-ps = [5, 10, 20]
-ts = [2, 3, 4, 5]
+#ns = [50, 100, 150, 200]
+ns = [50]
+#ps = [5, 10, 20]
+ps = [2, 3, 4]
+#ts = [2, 3, 4, 5]
+ts = [2, 3, 4]
+
+
 
 for n in ns:
     for p in ps:

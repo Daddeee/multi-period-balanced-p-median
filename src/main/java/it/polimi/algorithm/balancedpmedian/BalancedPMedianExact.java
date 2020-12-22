@@ -9,6 +9,23 @@ import java.util.Arrays;
 
 public class BalancedPMedianExact implements Solver {
 
+    private double lambda;
+
+    private double cost;
+    private double fairness;
+
+    public BalancedPMedianExact(double lambda) {
+        this.lambda = lambda;
+    }
+
+    public double getCost() {
+        return cost;
+    }
+
+    public double getFairness() {
+        return fairness;
+    }
+
     @Override
     public Solution run(Problem problem) {
         AMPL ampl = new AMPL();
@@ -17,7 +34,7 @@ public class BalancedPMedianExact implements Solver {
             ampl.readData("");
             ampl.setOption("solver", "cplex");
             ampl.setOption("cplex_options", "threads=1");
-            ampl.setOutputHandler((kind, s) -> {});
+            //ampl.setOutputHandler((kind, s) -> {});
 
             Parameter n = ampl.getParameter("n");
             n.setValues(problem.getN());
@@ -37,11 +54,11 @@ public class BalancedPMedianExact implements Solver {
                 }
             }
 
-            Parameter d = ampl.getParameter("d");
+            Parameter d = ampl.getParameter("c");
             d.setValues(tuples, distances);
 
-            Parameter alpha = ampl.getParameter("alpha");
-            alpha.setValues(problem.getAlpha());
+            Parameter lambda = ampl.getParameter("lambda");
+            lambda.setValues(this.lambda);
 
             long start = System.nanoTime();
             ampl.solve();
@@ -57,7 +74,13 @@ public class BalancedPMedianExact implements Solver {
                     medians[(int) Math.round((double) os[1])] = (int) Math.round((double) os[0]);
             });
 
-            double obj = ampl.getObjective("distance_and_displacement").value();
+            double obj = ampl.getObjective("distance_and_unfairness").value();
+
+            ampl.eval("param status symbolic; let status := solve_result;");
+            String status = (String) ampl.getParameter("status").get();
+
+            if (!status.equals("solved") && !status.equals("solved?"))
+                return null;
 
             int[] periods = new int[problem.getN()];
             int[] supermedians = new int[problem.getN()];
@@ -65,6 +88,13 @@ public class BalancedPMedianExact implements Solver {
             for (int i=0; i<medians.length; i++)
                 if (medians[i] == i)
                     supermedians[i] = i;
+
+
+            ampl.eval("param cost; let cost := s1 * (sum {i in V, j in V} c[i,j] * x[i,j]);");
+            this.cost = (double) ampl.getParameter("cost").get();
+
+            ampl.eval("param fairness; let fairness := s2 * (sum {i in V} y[i]);");
+            this.fairness = (double) ampl.getParameter("fairness").get();
 
             return new Solution(periods, medians, supermedians, obj, elapsedTime);
         } catch (Exception e) {

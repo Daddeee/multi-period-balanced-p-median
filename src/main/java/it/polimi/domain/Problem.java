@@ -47,6 +47,21 @@ public class Problem {
         this.kmax = p;
     }
 
+    public Problem(List<Service> services, int n, int p, float[][] c) {
+        this.services = services;
+        this.n = n;
+        this.p = p;
+        this.c = c;
+        this.m = 1;
+        this.r = new int[n];
+        this.d = new int[n];
+        Arrays.fill(r, 0);
+        Arrays.fill(d, 0);
+        this.avg = (double) n/p;
+        this.alpha = computeAlpha();
+        this.kmax = p;
+    }
+
     public List<Service> getServices() {
         return services;
     }
