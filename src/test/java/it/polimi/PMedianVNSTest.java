@@ -53,7 +53,7 @@ public class PMedianVNSTest {
         }
 
         TestCSVWriter writer = new TestCSVWriter(n, p, opt, res, times);
-        writer.write("results/pmedian/orlib.csv");
+        writer.write("results/pmedian/orlib2.csv");
         System.out.println("avg gap = " + avgGap/numInstances + "%");
         System.out.println("avg time= " + avgTime/numInstances + "ms");
     }
