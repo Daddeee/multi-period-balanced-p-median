@@ -3,6 +3,9 @@ package it.polimi.algorithm.balancedpmedian;
 import it.polimi.util.Pair;
 import it.polimi.util.Triple;
 
+import java.util.Comparator;
+import java.util.stream.IntStream;
+
 public class BalancedFastInterchange {
 
     private int n;
@@ -63,11 +66,13 @@ public class BalancedFastInterchange {
         int[][] counts = new int[p][p];
         int[] goincounts = new int[p];
 
-        // load old medians
-        for (int i=0; i<n; i++) {
-            for (int j=0; j<p; j++) {
+        double[] fs = new double[p];
+        for (int j=0; j<p; j++) {
+            fs[j] = 0;
+            for (int i=0; i<n; i++) {
                 nc1[j][i] = c1[i];
                 counts[j][xidx[c1[i]]] += 1;
+                fs[j] += d[i][c1[i]];
             }
         }
 
@@ -80,100 +85,107 @@ public class BalancedFastInterchange {
             if (d[i][goin] < d[i][c1[i]]) {
                 for (int j=0; j<p; j++) {
                     goincounts[j] += 1;
+                    fs[j] += d[i][goin];
+                    fs[j] -= d[i][c1[i]];
                     nc1[j][i] = goin;
                     if (xidx[c1[i]] != j)
                         counts[j][xidx[c1[i]]] -= 1;
                 }
             } else {
                 if (d[i][goin] <= d[i][c2[i]])  {
+                    fs[xidx[c1[i]]] += d[i][goin];
+                    fs[xidx[c1[i]]] -= d[i][c2[i]];
                     nc1[xidx[c1[i]]][i] = goin;
                     goincounts[xidx[c1[i]]] += 1;
                 } else {
+                    fs[xidx[c1[i]]] += d[i][c2[i]];
+                    fs[xidx[c1[i]]] -= d[i][c1[i]];
                     nc1[xidx[c1[i]]][i] = c2[i];
                     counts[xidx[c1[i]]][xidx[c2[i]]] += 1;
                 }
             }
         }
 
-        // perform convenient swaps
-        for (int i=0; i<p; i++) {
-            for (int j=0; j<n; j++) {
-                int jmed = nc1[i][j];
-                int jmedcount = jmed == goin ? goincounts[i] : counts[i][xidx[jmed]];
-                if (jmedcount > avg && jmed != j) {
-                    // gain in the objective function due to removing j from jmed
-                    double removalGain = d[j][jmed];
-                    removalGain += alpha * Math.min(jmedcount - avg, 1);
-                    removalGain -= alpha * Math.max(avg - (jmedcount - 1), 0);
-                    // check if there's a median with a lower delta. Skip median with count >= avg because they cannot
-                    // do better than jmed (by construction jmed is closer to j then any other),
-                    double bestInsertionCost = Double.MAX_VALUE;
-                    int bestInsertionMedian = -1;
-                    for (int k=0; k<p; k++) {
-                        int kcount = counts[i][k];
-                        if (kcount >= avg || k == i) continue;
-                        double insertionCost = d[j][x[k]];
-                        insertionCost -= alpha * Math.min(Math.max(avg - (kcount + 1), 0), 1);
-                        insertionCost += alpha * Math.max(kcount + 1 - avg, 0);
-                        if (insertionCost < bestInsertionCost) {
-                            bestInsertionCost = insertionCost;
-                            bestInsertionMedian = x[k];
-                        }
-                    }
-                    int kcount = goincounts[i];
-                    if (kcount < avg) {
-                        double insertionCost = d[j][goin];
-                        insertionCost -= alpha * Math.min(Math.max(avg - (kcount + 1), 0), 1);
-                        insertionCost += alpha * Math.max(kcount + 1 - avg, 0);
-                        if (insertionCost < bestInsertionCost) {
-                            bestInsertionCost = insertionCost;
-                            bestInsertionMedian = goin;
-                        }
-                    }
+        for (int j=0; j<p; j++) {
+            for (int k=0; k<p; k++) {
+                fs[j] += alpha * Math.abs(counts[j][k] - avg);
+            }
+            fs[j] += alpha * Math.abs(goincounts[j] - avg);
+        }
 
-                    if (bestInsertionMedian != -1 && bestInsertionCost < removalGain) {
-                        nc1[i][j] = bestInsertionMedian;
-                        if (jmed == goin) {
-                            goincounts[i] -= 1;
-                        } else {
-                            counts[i][xidx[jmed]] -= 1;
-                        }
-                        if (bestInsertionMedian == goin) {
-                            goincounts[i] += 1;
-                        } else {
-                            counts[i][xidx[bestInsertionMedian]] += 1;
-                        }
+        int bestJ = 0;
+        double bestF = fs[0];
+        for (int j=1; j<p; j++) {
+            if (fs[j] < bestF) {
+                bestF = fs[j];
+                bestJ = j;
+            }
+        }
+
+        int i = bestJ;
+        for (int j=0; j<n; j++) {
+            int jmed = nc1[i][j];
+            int jmedcount = jmed == goin ? goincounts[i] : counts[i][xidx[jmed]];
+            if (jmedcount > avg && jmed != j) {
+                // gain in the objective function due to removing j from jmed
+                double removalGain = d[j][jmed];
+                removalGain += alpha * Math.min(jmedcount - avg, 1);
+                removalGain -= alpha * Math.max(avg - (jmedcount - 1), 0);
+                // check if there's a median with a lower delta. Skip median with count >= avg because they cannot
+                // do better than jmed (by construction jmed is closer to j then any other),
+                double bestInsertionCost = Double.MAX_VALUE;
+                int bestInsertionMedian = -1;
+                for (int k=0; k<p; k++) {
+                    int kcount = counts[i][k];
+                    if (kcount >= avg || k == i) continue;
+                    double insertionCost = d[j][x[k]];
+                    insertionCost -= alpha * Math.min(Math.max(avg - (kcount + 1), 0), 1);
+                    insertionCost += alpha * Math.max(kcount + 1 - avg, 0);
+                    if (insertionCost < bestInsertionCost) {
+                        bestInsertionCost = insertionCost;
+                        bestInsertionMedian = x[k];
+                    }
+                }
+                int kcount = goincounts[i];
+                if (kcount < avg) {
+                    double insertionCost = d[j][goin];
+                    insertionCost -= alpha * Math.min(Math.max(avg - (kcount + 1), 0), 1);
+                    insertionCost += alpha * Math.max(kcount + 1 - avg, 0);
+                    if (insertionCost < bestInsertionCost) {
+                        bestInsertionCost = insertionCost;
+                        bestInsertionMedian = goin;
+                    }
+                }
+
+                if (bestInsertionMedian != -1 && bestInsertionCost < removalGain) {
+                    nc1[i][j] = bestInsertionMedian;
+                    if (jmed == goin) {
+                        goincounts[i] -= 1;
+                    } else {
+                        counts[i][xidx[jmed]] -= 1;
+                    }
+                    if (bestInsertionMedian == goin) {
+                        goincounts[i] += 1;
+                    } else {
+                        counts[i][xidx[bestInsertionMedian]] += 1;
                     }
                 }
             }
         }
 
-        double zopt = Double.MAX_VALUE;
-        int goout = -1;
-        int[] ax = new int[0];
-        for (int i=0; i<p; i++) {
-            double zdist = 0;
-            double zavg = 0;
+        int goout = i;
+        int[] ax = nc1[i];
+        double z = 0.;
+        for (int j=0; j<n; j++)
+            z += d[j][nc1[i][j]];
 
-            for (int j=0; j<n; j++)
-                zdist += d[j][nc1[i][j]];
-
-            for (int j=0; j<p; j++) {
-                if (j == i) continue;
-                zavg += alpha * Math.abs(counts[i][j] - avg);
-            }
-            zavg += alpha * Math.abs(goincounts[i] - avg);
-
-            double z = zdist + zavg;
-
-            if (z < zopt) {
-                zopt = z;
-                goout = i;
-                ax = nc1[i];
-            }
+        for (int j=0; j<p; j++) {
+            if (j == i) continue;
+            z += alpha * Math.abs(counts[i][j] - avg);
         }
+        z += alpha * Math.abs(goincounts[i] - avg);
 
-        return new Triple<>(x[goout], zopt, ax);
+        return new Triple<>(x[goout], z, ax);
     }
 
     public void update(int[]x, int[] c1, int[] c2, int goin, int goout) {
