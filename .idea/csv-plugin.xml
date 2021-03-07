@@ -3,6 +3,13 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
+        <entry key="/results/balancedpmedian/orlib-rvns.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/results/balancedpmedian/orlib-vns-old.csv">
           <value>
             <Attribute>
@@ -11,6 +18,13 @@
           </value>
         </entry>
         <entry key="/results/balancedpmedian/orlib-vns-original.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/results/balancedpmedian/orlib-vns.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

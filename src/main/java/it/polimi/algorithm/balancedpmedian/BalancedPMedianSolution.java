@@ -32,9 +32,9 @@ public class BalancedPMedianSolution {
         int[][] c = getClosestMedians(x, n, p, d);
         this.c1 = c[0];
         this.c2 = c[1];
-        this.f = objectiveFunction(n, d, alpha, avg);
-
         this.ax = c1.clone();
+        this.f = objectiveFunction(n, d, alpha, avg);
+        this.lb1 = lb1(n, d);
     }
 
     public BalancedPMedianSolution clone() {
@@ -134,9 +134,9 @@ public class BalancedPMedianSolution {
 
         Map<Integer, Integer> counts = new HashMap<>();
         for (int i=0; i<n; i++) {
-            w += d[i][c1[i]];
-            int c = counts.getOrDefault(c1[i], 0);
-            counts.put(c1[i], c + 1);
+            w += d[i][ax[i]];
+            int c = counts.getOrDefault(ax[i], 0);
+            counts.put(ax[i], c + 1);
         }
 
         if (counts.values().size() == 0)
@@ -145,6 +145,13 @@ public class BalancedPMedianSolution {
         for (int c : counts.values())
             w += alpha * Math.abs(c - avg);
 
+        return w;
+    }
+
+    public double lb1(int n, float[][] d) {
+        double w = 0;
+        for (int i=0; i<n; i++)
+            w += d[i][ax[i]];
         return w;
     }
 

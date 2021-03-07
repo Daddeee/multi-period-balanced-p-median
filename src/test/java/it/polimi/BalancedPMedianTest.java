@@ -189,7 +189,7 @@ public class BalancedPMedianTest {
         }
 
         TestCSVWriter writer = new TestCSVWriter(n, p, opt, res, times);
-        writer.write("results/balancedpmedian/orlib-rvns.csv");
+        writer.write("results/balancedpmedian/orlib-vns.csv");
         System.out.println("avg gap = " + avgGap/numInstances + "%");
         System.out.println("avg time= " + avgTimeExec/numInstances + "ms");
     }

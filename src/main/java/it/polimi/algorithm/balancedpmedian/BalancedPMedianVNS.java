@@ -89,6 +89,7 @@ public class BalancedPMedianVNS implements Solver {
             int goout = cur.getX()[random.nextInt(p)];
             cur.swap(goin, goout, n, p, d, alpha, avg);
         }
+        cur.setAx(cur.getC1().clone());
         cur.setF(cur.objectiveFunction(n, d, alpha, avg));
     }
 
