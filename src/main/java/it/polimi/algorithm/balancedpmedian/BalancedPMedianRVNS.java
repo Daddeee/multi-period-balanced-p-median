@@ -45,8 +45,9 @@ public class BalancedPMedianRVNS implements Solver {
         int[][] c = getClosestMedians(xopt, n, p, d);
         int[] c1opt = c[0];
         int[] c2opt = c[1];
-        double fopt = computeObjectiveFunction(c1opt, n, d, alpha, avg);
         int[] axopt = c1opt.clone();
+        double fopt = computeObjectiveFunction(c1opt, n, d, alpha, avg);
+        double lb1opt = computeObjectiveFunction(c1opt, n, d, 0, avg);
 
         int count = 0;
         do {
@@ -55,16 +56,18 @@ public class BalancedPMedianRVNS implements Solver {
             int[] xidxacc = xidxopt.clone();
             int[] c1acc = c1opt.clone();
             int[] c2acc = c2opt.clone();
-            double facc = fopt;
             int[] axacc = axopt.clone();
+            double facc = fopt;
+            double lb1acc = lb1opt;
 
             // current values
             int[] xcur = xopt.clone();
             int[] xidxcur = xidxopt.clone();
             int[] c1cur = c1opt.clone();
             int[] c2cur = c2opt.clone();
-            double fcur = fopt;
             int[] axcur = axopt.clone();
+            double fcur = fopt;
+            double lb1cur = lb1opt;
 
             double temperature = getInitialTemperature(fcur);
             double cooling = 0.995;
@@ -76,12 +79,7 @@ public class BalancedPMedianRVNS implements Solver {
                 for (int j = 1; j <= k; j++) {
                     // sample random median to be inserted
                     int goin = xcur[random.nextInt(n - p) + p];
-
-                    // find best median to remove
-                    Triple<Integer, Double, int[]> triple = bfi.move(xcur, xidxcur, c1cur, c2cur, goin);
-                    int goout = triple.getFirst();
-                    fcur = triple.getSecond();
-                    axcur = triple.getThird();
+                    int goout = xcur[random.nextInt(p)];
 
                     // update xcur and xidx
                     int outidx = xidxcur[goout], inidx = xidxcur[goin];

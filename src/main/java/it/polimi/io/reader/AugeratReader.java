@@ -16,6 +16,10 @@ import java.util.stream.Collectors;
 public class AugeratReader {
 
     public static Problem read(String filepath) {
+        return read(filepath, true);
+    }
+
+    public static Problem read(String filepath, boolean skipDepot) {
         try {
             int n, p;
 
@@ -31,7 +35,7 @@ public class AugeratReader {
             reader.readLine(); // EDGE_WEIGHT_TYPE
             reader.readLine(); // CAPACITY
             reader.readLine(); // NODE_COORD_SECTION
-            line = reader.readLine(); // skip first location because it's the depot
+            if (skipDepot) line = reader.readLine(); // skip first location because it's the depot
 
             List<Location> locations = new ArrayList<>();
             line = reader.readLine();

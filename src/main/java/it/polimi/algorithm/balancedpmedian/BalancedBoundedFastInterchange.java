@@ -1,106 +1,36 @@
 package it.polimi.algorithm.balancedpmedian;
 
-import it.polimi.algorithm.Solver;
-import it.polimi.domain.Problem;
-import it.polimi.domain.Solution;
+import it.polimi.util.Pair;
 import it.polimi.util.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Random;
+public class BalancedBoundedFastInterchange {
+    private static final Logger LOGGER = LoggerFactory.getLogger(BalancedBoundedFastInterchange.class);
 
-public class BalancedPMedianVNS implements Solver {
-    public static int MAX_RESTART_WITHOUT_IMPROVEMENTS = 0;
-    private final Logger LOGGER = LoggerFactory.getLogger(BalancedPMedianRVNS.class);
-    private final Random random;
+    private int n;
+    private int p;
+    private float[][] d;
+    private double alpha;
+    private double avg;
 
-    public BalancedPMedianVNS() {
-        this(new Random());
+    public BalancedBoundedFastInterchange(final int n, final int p, final float[][] d, final double alpha, final double avg) {
+        this.n = n;
+        this.p = p;
+        this.d = d;
+        this.alpha = alpha;
+        this.avg = avg;
     }
 
-    public BalancedPMedianVNS(int seed) {
-        this(new Random(seed));
-    }
-
-    public BalancedPMedianVNS(Random random) {
-        this.random = random;
-    }
-
-    @Override
-    public Solution run(Problem problem) {
-        double start = System.nanoTime();
-        int n = problem.getN();
-        int p = problem.getP();
-        float[][] d = problem.getC();
-        double avg = problem.getAvg();
-        double alpha = problem.getAlpha();
-        int kmax = problem.getKmax();
-
-        BalancedPMedianSolution opt = new BalancedPMedianSolution(n, p, d, alpha, avg, random);
-
-        int count = 0;
-        do {
-            BalancedPMedianSolution acc = opt.clone();
-            BalancedPMedianSolution cur = opt.clone();
-
-            double temperature = getInitialTemperature(cur.getF());
-            double cooling = 0.995;
-
-            int k = 1;
-            while (k <= kmax) {
-                // shaking
-                shake(cur, k, n, p, d, avg, alpha);
-
-                localSearch(cur, n, p, d, avg, alpha);
-
-                // Move or not
-                if (accept(acc.getF(), cur.getF(), temperature)) {
-                    acc = cur.clone();
-                    k = 1;
-                    if (acc.getF() < opt.getF()) {
-                        opt = acc.clone();
-                    }
-                } else {
-                    cur = acc.clone();
-                    k = k + 1;
-                }
-
-                temperature = temperature*cooling;
-            }
-            count++;
-            //LOGGER.info("Restarting. best=" + fopt + " count=" + count);
-        } while (count < MAX_RESTART_WITHOUT_IMPROVEMENTS);
-
-        double end = System.nanoTime();
-        double time = (end - start) / 1e6;
-        int[] periods = new int[n];
-        int[] supermedians = new int[n];
-        for (int i=0; i<n; i++)
-            supermedians[i] = (opt.getC1()[i] == i) ? i : Solution.NO_SUPERMEDIAN;
-
-        //LOGGER.info("Completed! Solution cost=" + fopt + "\n");
-
-        return new Solution(periods, opt.getAx(), supermedians, opt.getF(), time);
-    }
-
-    private void shake(BalancedPMedianSolution cur, int k, int n, int p, float[][] d, double avg, double alpha) {
-        for (int j = 1; j <= k; j++) {
-            int goin = cur.getX()[random.nextInt(n - p) + p];
-            int goout = cur.getX()[random.nextInt(p)];
-            cur.swap(goin, goout, n, p, d, alpha, avg);
-        }
-        cur.setF(cur.objectiveFunction(n, d, alpha, avg));
-    }
-
-    private void localSearch(BalancedPMedianSolution sol, int n, int p, float[][] d, double avg, double alpha) {
+    public double fastInterchange(int[] xopt, int[] xidx, int[] ax, int[] c1, int[] c2, double fopt, double lbopt) {
         while(true) {
             // find optimal goin and gout
             double wopt = Float.MAX_VALUE;
             int goinopt = -1, gooutopt = -1;
             int[] axopt = new int[0];
             for (int i=p; i < n; i++) {
-                int goin = sol.getX()[i];
-                Triple<Integer, Double, int[]> triple = move(sol, goin, n, p, d, alpha, avg);
+                int goin = xopt[i];
+                Triple<Integer, Double, int[]> triple = move(xopt, xidx, c1, c2, goin);
                 double w = triple.getSecond();
                 if (w < wopt) {
                     wopt = w;
@@ -111,24 +41,27 @@ public class BalancedPMedianVNS implements Solver {
             }
 
             // no improvement found
-            if (wopt - sol.getF() >= 0) {
+            if (wopt - fopt >= 0) {
                 for (int i=0; i<axopt.length; i++)
-                    sol.getAx()[i] = axopt[i];
-                return;
+                    ax[i] = axopt[i];
+                return fopt;
             }
 
-            sol.setF(wopt);
-            sol.swap(goinopt, gooutopt, n, p, d, alpha, avg);
+            // update obj function
+            fopt = wopt;
+
+            // swap optimal goin and goout
+            int outidx = xidx[gooutopt], inidx = xidx[goinopt];
+            xopt[outidx] = goinopt;
+            xopt[inidx] = gooutopt;
+            xidx[goinopt] = outidx;
+            xidx[gooutopt] = inidx;
+
+            update(xopt, c1, c2, goinopt, gooutopt);
         }
     }
 
-    public Triple<Integer, Double, int[]> move(BalancedPMedianSolution sol, int goin, int n, int p, float[][] d,
-                                               double alpha, double avg) {
-        int[] x = sol.getX();
-        int[] c1 = sol.getC1();
-        int[] c2 = sol.getC2();
-        int[] xidx = sol.getXidx();
-
+    public Triple<Integer, Double, int[]> move(int[] x, int[] xidx, int[] c1, int[] c2, int goin) {
         int[][] nc1 = new int[p][n];
         int[][] counts = new int[p][p];
         int[] goincounts = new int[p];
@@ -137,8 +70,8 @@ public class BalancedPMedianVNS implements Solver {
         for (int j=0; j<p; j++) {
             fs[j] = 0;
             for (int i=0; i<n; i++) {
-                nc1[j][i] = sol.getC1()[i];
-                counts[j][sol.getXidx()[c1[i]]] += 1;
+                nc1[j][i] = c1[i];
+                counts[j][xidx[c1[i]]] += 1;
                 fs[j] += d[i][c1[i]];
             }
         }
@@ -255,15 +188,47 @@ public class BalancedPMedianVNS implements Solver {
         return new Triple<>(x[goout], z, ax);
     }
 
-    private boolean accept(double opt, double cur, double temperature) {
-        double prob = Math.exp(-(cur - opt)/temperature);
-        return opt != cur && random.nextDouble() < prob;
+    public void update(int[]x, int[] c1, int[] c2, int goin, int goout) {
+        // updates c1 and c2 for each location by replacing goout with goin
+        for (int i=0; i<n; i++) {
+
+            // if goout is current median
+            if (c1[i] == goout) {
+                // if goin is closer to i than the second median c2[i]
+                if (d[i][goin] <= d[i][c2[i]]) {
+                    // it becomes the new median
+                    c1[i] = goin;
+                } else {
+                    // otherwise c2[i] becomes the new median
+                    c1[i] = c2[i];
+
+                    // and another c2[i] is searched.
+                    c2[i] = searchSecondMedian(i, x, c1);
+                }
+            } else {
+                if (d[i][goin] < d[i][c1[i]]) {
+                    c2[i] = c1[i];
+                    c1[i] = goin;
+                } else if (d[i][goin] < d[i][c2[i]]) {
+                    c2[i] = goin;
+                } else if (c2[i] == goout) {
+                    // and another c2[i] is searched.
+                    c2[i] = searchSecondMedian(i,x, c1);
+                }
+            }
+        }
     }
 
-    private double getInitialTemperature(double obj) {
-        double w = 0.05;
-        return w*obj / Math.log(2);
+    private int searchSecondMedian(int i, int[] x, int[] c1) {
+        //  TODO: maybe use max heap
+        float newMin = Float.MAX_VALUE;
+        int secondMedian = -1;
+        for (int j=0; j<p; j++) {
+            if (x[j] != c1[i] && d[i][x[j]] < newMin) {
+                newMin = d[i][x[j]];
+                secondMedian = x[j];
+            }
+        }
+        return secondMedian;
     }
-
-    
 }

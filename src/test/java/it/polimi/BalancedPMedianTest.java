@@ -3,7 +3,6 @@ package it.polimi;
 import it.polimi.algorithm.balancedpmedian.BalancedPMedianExactOld;
 import it.polimi.algorithm.balancedpmedian.BalancedPMedianRVNS;
 import it.polimi.algorithm.balancedpmedian.BalancedPMedianVNS;
-import it.polimi.algorithm.pmedian.PMedianVNS;
 import it.polimi.domain.Location;
 import it.polimi.domain.Problem;
 import it.polimi.domain.Service;
@@ -155,15 +154,15 @@ public class BalancedPMedianTest {
             String path = String.format(basePath + filename + ".txt", i);
             Problem problem = ORLIBReader.read(path);
 
-            //BalancedPMedianExact exact = new BalancedPMedianExact();
+            //PMedianExact exact = new PMedianExact();
             //Solution exactSolution = exact.run(problem);
 
             double avgRes = 0., avgTime = 0.;
             Solution vnsSolution = null;
             for (int j=0; j<tries; j++) {
                 //PMedianVNS solver = new PMedianVNS();
-                BalancedPMedianRVNS solver = new BalancedPMedianRVNS();
-                //BalancedPMedianVNS solver = new BalancedPMedianVNS();
+                //BalancedPMedianRVNS solver = new BalancedPMedianRVNS();
+                BalancedPMedianVNS solver = new BalancedPMedianVNS();
                 //BalancedPMedianALNS solver = new BalancedPMedianALNS();
                 vnsSolution = solver.run(problem);
                 avgRes += getObjective(problem, vnsSolution);
@@ -190,7 +189,7 @@ public class BalancedPMedianTest {
         }
 
         TestCSVWriter writer = new TestCSVWriter(n, p, opt, res, times);
-        writer.write("results/balancedpmedian/orlib-vns-original.csv");
+        writer.write("results/balancedpmedian/orlib-rvns.csv");
         System.out.println("avg gap = " + avgGap/numInstances + "%");
         System.out.println("avg time= " + avgTimeExec/numInstances + "ms");
     }

@@ -7,12 +7,22 @@ public class Service {
     private final Location location;
     private final int releaseDate;
     private final int dueDate;
+    private final int demand;
 
     public Service(String id, Location location, int releaseDate, int dueDate) {
         this.id = id;
         this.location = location;
         this.releaseDate = releaseDate;
         this.dueDate = dueDate;
+        this.demand = 0;
+    }
+
+    public Service(String id, Location location, int releaseDate, int dueDate, int demand) {
+        this.id = id;
+        this.location = location;
+        this.releaseDate = releaseDate;
+        this.dueDate = dueDate;
+        this.demand = demand;
     }
 
     public String getId() {
@@ -29,6 +39,10 @@ public class Service {
 
     public int getDueDate() {
         return dueDate;
+    }
+
+    public int getDemand() {
+        return demand;
     }
 
     @Override

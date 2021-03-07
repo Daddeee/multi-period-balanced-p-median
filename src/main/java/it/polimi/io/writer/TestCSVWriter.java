@@ -114,6 +114,30 @@ public class TestCSVWriter {
         }
     }
 
+    public static void write(String filepath, String[] files, double[] opt, double[] opttime, int[] n, int[] p) {
+        try {
+            int len =opt.length;
+
+            File solutionFile = new File(filepath);
+            solutionFile.getParentFile().mkdirs();
+            solutionFile.createNewFile();
+
+            BufferedWriter writer = new BufferedWriter(new FileWriter(solutionFile));
+
+            String formatRow = "%-15s %-15s %-15s %-15s %-15s%n";
+
+            writer.write(String.format(formatRow, "Instance", "N", "P", "Opt", "Opt. Time"));
+
+            for (int i=0; i<len; i++)
+                writer.write(String.format(formatRow, files[i], n[i], p[i], String.format("%.4f", opt[i]),
+                        String.format("%.2f", opttime[i])));
+
+            writer.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static void write(String filepath, double[] opt, double[] res, double[] opttime, double[] restime, int[] n,
                              int[] p) {
         try {
