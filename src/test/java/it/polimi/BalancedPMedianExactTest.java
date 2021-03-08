@@ -1,5 +1,6 @@
 package it.polimi;
 
+import it.polimi.algorithm.balancedpmedian.BalancedAssignmentSolver;
 import it.polimi.algorithm.balancedpmedian.BalancedPMedianExact;
 import it.polimi.algorithm.fairpmedian.FairPMedianExact;
 import it.polimi.domain.Location;
@@ -9,6 +10,7 @@ import it.polimi.domain.Solution;
 import it.polimi.io.reader.AugeratReader;
 import it.polimi.io.writer.TestCSVWriter;
 import it.polimi.io.writer.ZonesCSVWriter;
+import it.polimi.util.Pair;
 import org.junit.Test;
 
 import java.io.BufferedWriter;
@@ -17,6 +19,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class BalancedPMedianExactTest {
     @Test
@@ -46,16 +49,32 @@ public class BalancedPMedianExactTest {
             BalancedPMedianExact exact = new BalancedPMedianExact(0.5);
             Solution exactSolution = exact.run(problem);
 
+            Set<Integer> medians = Arrays.stream(exactSolution.getMedians()).boxed().collect(Collectors.toSet());
+            int[] x = IntStream.range(0, problem.getN()).toArray();
+            int k=0;
+            for (int j=problem.getP(); j<problem.getN(); j++) {
+                if (medians.contains(j)) {
+                    while (medians.contains(x[k])) k++;
+                    int tmp = x[k];
+                    x[k] = x[j];
+                    x[j] = tmp;
+                }
+            }
+            Pair<Double, int[]> ass = BalancedAssignmentSolver.solve(problem.getN(), problem.getP(), problem.getC(), problem.getAlpha(),
+                    problem.getAvg(), x);
+            System.out.println("ASSIGNMENT: " + ass.getFirst());
+
+
             n[i] = problem.getN();
             p[i] = problem.getP();
             opt[i] = exactSolution.getObjective();
             opttimes[i] = exactSolution.getElapsedTime();
-            costs[i] = exact.getCost();
+            costs[i] = ass.getFirst();
             avgs[i] = getAvg(problem.getP(), problem.getN(), exactSolution);
             bmeans[i] = getBMean(0.4, problem.getP(), problem.getN(), exactSolution);
 
-            ZonesCSVWriter.write("results/balancedpmedian/bpmp-" + files[i],
-                    problem.getServices().stream().map(Service::getLocation).toArray(Location[]::new), exactSolution.getMedians());
+            //ZonesCSVWriter.write("results/balancedpmedian/bpmp-" + files[i],
+            //        problem.getServices().stream().map(Service::getLocation).toArray(Location[]::new), exactSolution.getMedians());
         }
 
         TestCSVWriter.write("results/balancedpmedian/augerat.csv", opt, opttimes, costs, avgs, bmeans, n, p);

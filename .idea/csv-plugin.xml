@@ -3,6 +3,13 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
+        <entry key="/results/balancedpmedian/augerat.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/results/balancedpmedian/orlib-rvns.csv">
           <value>
             <Attribute>
@@ -60,6 +67,13 @@
           </value>
         </entry>
         <entry key="/src/main/java/it/polimi/algorithm/balancedpmedian/BalancedFastInterchange.java">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/src/main/java/it/polimi/algorithm/balancedpmedian/BalancedPMedianExact.java">
           <value>
             <Attribute>
               <option name="separator" value=";" />
