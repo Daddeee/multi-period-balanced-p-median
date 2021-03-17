@@ -1,5 +1,6 @@
 package it.polimi;
 
+import it.polimi.algorithm.balancedpmedian.BalancedPMedianExact;
 import it.polimi.algorithm.balancedpmedian.BalancedPMedianExactOld;
 import it.polimi.algorithm.balancedpmedian.BalancedPMedianRVNS;
 import it.polimi.algorithm.balancedpmedian.BalancedPMedianVNS;
@@ -81,11 +82,10 @@ public class BalancedPMedianTest {
     @Test
     public void augerat() {
         String basePath = "instances/augerat/A-VRP/";
-        String baseZonePath = "instances/augerat/zones/A-VRP/";
         String[] files = getFiles(basePath);
         Arrays.sort(files);
 
-        files = new String[] { files[0] };
+        //files = Arrays.copyOfRange(files, 0, 1);
 
         int numInstances = files.length;
         double[] opt = new double[numInstances];
@@ -95,7 +95,7 @@ public class BalancedPMedianTest {
         double[] restimes = new double[numInstances];
         double[] opttimes = new double[numInstances];
 
-        int tries = 10;
+        int tries = 1;
 
         for (int i=0; i<files.length; i++) {
 
@@ -104,18 +104,19 @@ public class BalancedPMedianTest {
 
             System.out.println("INSTANCE: " + filePath);
 
-            BalancedPMedianExactOld exact = new BalancedPMedianExactOld();
+            BalancedPMedianExact exact = new BalancedPMedianExact(1);
             Solution exactSolution = exact.run(problem);
 
             double resSum = 0., timeSum = 0.;
             Solution best = null;
             for (int k=0; k<tries; k++) {
-                BalancedPMedianRVNS rvns = new BalancedPMedianRVNS(1337);
-                Solution rvnsSolution = rvns.run(problem);
-                resSum += rvnsSolution.getObjective();
-                timeSum += rvnsSolution.getElapsedTime();
-                if (best == null || rvnsSolution.getObjective() < best.getObjective())
-                    best = rvnsSolution;
+                //BalancedPMedianVNS vns = new BalancedPMedianVNS(1337);
+                BalancedPMedianRVNS vns = new BalancedPMedianRVNS(1337);
+                Solution vnsSolution = vns.run(problem);
+                resSum += vnsSolution.getObjective();
+                timeSum += vnsSolution.getElapsedTime();
+                if (best == null || vnsSolution.getObjective() < best.getObjective())
+                    best = vnsSolution;
             }
 
             n[i] = problem.getN();
@@ -125,8 +126,8 @@ public class BalancedPMedianTest {
             opttimes[i] = exactSolution.getElapsedTime();
             restimes[i] = timeSum / tries;
 
-            ZonesCSVWriter.write("results/bpmp-" + files[i],
-                    problem.getServices().stream().map(Service::getLocation).toArray(Location[]::new), exactSolution.getMedians());
+            //ZonesCSVWriter.write("results/bpmp-" + files[i],
+            //        problem.getServices().stream().map(Service::getLocation).toArray(Location[]::new), exactSolution.getMedians());
             //writeZones(zonePath, exactSolution.getMedians());
         }
 
@@ -161,8 +162,8 @@ public class BalancedPMedianTest {
             Solution vnsSolution = null;
             for (int j=0; j<tries; j++) {
                 //PMedianVNS solver = new PMedianVNS();
-                //BalancedPMedianRVNS solver = new BalancedPMedianRVNS();
-                BalancedPMedianVNS solver = new BalancedPMedianVNS();
+                BalancedPMedianRVNS solver = new BalancedPMedianRVNS();
+                //BalancedPMedianVNS solver = new BalancedPMedianVNS();
                 //BalancedPMedianALNS solver = new BalancedPMedianALNS();
                 vnsSolution = solver.run(problem);
                 avgRes += getObjective(problem, vnsSolution);

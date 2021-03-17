@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class Problem {
+public class Problem implements it.polimi.algorithm.alns.Problem {
     private final List<Service> services;
 
     private final int n;

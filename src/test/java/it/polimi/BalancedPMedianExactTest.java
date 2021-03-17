@@ -60,7 +60,8 @@ public class BalancedPMedianExactTest {
                     x[j] = tmp;
                 }
             }
-            Pair<Double, int[]> ass = BalancedAssignmentSolver.solve(problem.getN(), problem.getP(), problem.getC(), problem.getAlpha(),
+            BalancedAssignmentSolver balancedAssignmentSolver = new BalancedAssignmentSolver();
+            Pair<Double, int[]> ass = balancedAssignmentSolver.solve(problem.getN(), problem.getP(), problem.getC(), problem.getAlpha(),
                     problem.getAvg(), x);
             System.out.println("ASSIGNMENT: " + ass.getFirst());
 

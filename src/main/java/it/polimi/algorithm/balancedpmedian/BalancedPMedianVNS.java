@@ -3,6 +3,7 @@ package it.polimi.algorithm.balancedpmedian;
 import it.polimi.algorithm.Solver;
 import it.polimi.domain.Problem;
 import it.polimi.domain.Solution;
+import it.polimi.util.Pair;
 import it.polimi.util.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ public class BalancedPMedianVNS implements Solver {
     public static int MAX_RESTART_WITHOUT_IMPROVEMENTS = 0;
     private final Logger LOGGER = LoggerFactory.getLogger(BalancedPMedianRVNS.class);
     private final Random random;
+    private final BalancedAssignmentSolver balancedAssignmentSolver = new BalancedAssignmentSolver();
 
     public BalancedPMedianVNS() {
         this(new Random());
@@ -40,32 +42,42 @@ public class BalancedPMedianVNS implements Solver {
 
         int count = 0;
         do {
-            BalancedPMedianSolution acc = opt.clone();
+            //BalancedPMedianSolution acc = opt.clone();
             BalancedPMedianSolution cur = opt.clone();
 
-            double temperature = getInitialTemperature(cur.getF());
-            double cooling = 0.995;
+            //double temperature = getInitialTemperature(cur.getF());
+            //double cooling = 0.995;
 
             int k = 1;
             while (k <= kmax) {
                 // shaking
                 shake(cur, k, n, p, d, avg, alpha);
 
+                LOGGER.info("Starting local search. k=" + k + " cur=" + cur.getF() + " opt=" + opt.getF());
                 localSearch(cur, n, p, d, avg, alpha);
+                LOGGER.info("Completed local search. k=" + k + " cur=" + cur.getF() + " opt=" + opt.getF());
 
-                // Move or not
-                if (accept(acc.getF(), cur.getF(), temperature)) {
-                    acc = cur.clone();
+                if (cur.getF() < opt.getF()) {
+                    opt = cur.clone();
                     k = 1;
-                    if (acc.getF() < opt.getF()) {
-                        opt = acc.clone();
-                    }
                 } else {
-                    cur = acc.clone();
+                    cur = opt.clone();
                     k = k + 1;
                 }
 
-                temperature = temperature*cooling;
+                // Move or not
+                //if (accept(acc.getF(), cur.getF(), temperature)) {
+                //    acc = cur.clone();
+                //    k = 1;
+                //    if (acc.getF() < opt.getF()) {
+                //        opt = acc.clone();
+                //    }
+                //} else {
+                //    cur = acc.clone();
+                //    k = k + 1;
+                //}
+
+                //temperature = temperature*cooling;
             }
             count++;
             //LOGGER.info("Restarting. best=" + fopt + " count=" + count);
@@ -90,170 +102,37 @@ public class BalancedPMedianVNS implements Solver {
             cur.swap(goin, goout, n, p, d, alpha, avg);
         }
         cur.setAx(cur.getC1().clone());
-        cur.setF(cur.objectiveFunction(n, d, alpha, avg));
+        cur.setF(cur.objectiveFunction(n, p, d, alpha, avg));
     }
 
     private void localSearch(BalancedPMedianSolution sol, int n, int p, float[][] d, double avg, double alpha) {
-        while(true) {
-            // find optimal goin and gout
-            double wopt = Float.MAX_VALUE;
-            int goinopt = -1, gooutopt = -1;
-            int[] axopt = new int[0];
-            for (int i=p; i < n; i++) {
-                int goin = sol.getX()[i];
-                Triple<Integer, Double, int[]> triple = move(sol, goin, n, p, d, alpha, avg);
-                double w = triple.getSecond();
-                if (w < wopt) {
-                    wopt = w;
-                    goinopt = goin;
-                    gooutopt = triple.getFirst();
-                    axopt = triple.getThird();
+        for (int i=p; i<n; i++) {
+            for (int j=0; j<p; j++) {
+                BalancedPMedianSolution incumbent = sol.clone();
+                int goin = incumbent.getX()[i];
+                int goout = incumbent.getX()[j];
+                incumbent.swap(goin, goout, n, p, d, alpha, avg);
+                if (isBetter(incumbent, sol, n, p, d, alpha, avg)) {
+                    sol.swap(goin, goout, n, p, d, alpha, avg);
+                    sol.setF(incumbent.getF());
+                    sol.setAx(incumbent.getAx());
+                    i = p;
+                    break;
                 }
             }
-
-            // no improvement found
-            if (wopt - sol.getF() >= 0) {
-                for (int i=0; i<axopt.length; i++)
-                    sol.getAx()[i] = axopt[i];
-                return;
-            }
-
-            sol.setF(wopt);
-            sol.swap(goinopt, gooutopt, n, p, d, alpha, avg);
         }
     }
 
-    public Triple<Integer, Double, int[]> move(BalancedPMedianSolution sol, int goin, int n, int p, float[][] d,
-                                               double alpha, double avg) {
-        int[] x = sol.getX();
-        int[] c1 = sol.getC1();
-        int[] c2 = sol.getC2();
-        int[] xidx = sol.getXidx();
-
-        int[][] nc1 = new int[p][n];
-        int[][] counts = new int[p][p];
-        int[] goincounts = new int[p];
-
-        double[] fs = new double[p];
-        for (int j=0; j<p; j++) {
-            fs[j] = 0;
-            for (int i=0; i<n; i++) {
-                nc1[j][i] = sol.getC1()[i];
-                counts[j][sol.getXidx()[c1[i]]] += 1;
-                fs[j] += d[i][c1[i]];
-            }
+    private boolean isBetter(BalancedPMedianSolution incumbent, BalancedPMedianSolution opt, int n, int p, float[][] d,
+                             double alpha, double avg) {
+        //if (incumbent.getLb1() > opt.getF()) return false;
+        Pair<Double, int[]> optAx = balancedAssignmentSolver.solve(n, p, d, avg, alpha, incumbent.getX());
+        if (optAx.getFirst() < opt.getF()) {
+            incumbent.setAx(optAx.getSecond());
+            incumbent.setF(optAx.getFirst());
+            return true;
         }
-
-        // set deleted counts and distances to null
-        for (int j=0; j<p; j++)
-            counts[j][j] = 0;
-
-        // update with new medians
-        for (int i=0; i<n; i++) {
-            if (d[i][goin] < d[i][c1[i]]) {
-                for (int j=0; j<p; j++) {
-                    goincounts[j] += 1;
-                    fs[j] += d[i][goin];
-                    fs[j] -= d[i][c1[i]];
-                    nc1[j][i] = goin;
-                    if (xidx[c1[i]] != j)
-                        counts[j][xidx[c1[i]]] -= 1;
-                }
-            } else {
-                if (d[i][goin] <= d[i][c2[i]])  {
-                    fs[xidx[c1[i]]] += d[i][goin];
-                    fs[xidx[c1[i]]] -= d[i][c2[i]];
-                    nc1[xidx[c1[i]]][i] = goin;
-                    goincounts[xidx[c1[i]]] += 1;
-                } else {
-                    fs[xidx[c1[i]]] += d[i][c2[i]];
-                    fs[xidx[c1[i]]] -= d[i][c1[i]];
-                    nc1[xidx[c1[i]]][i] = c2[i];
-                    counts[xidx[c1[i]]][xidx[c2[i]]] += 1;
-                }
-            }
-        }
-
-        for (int j=0; j<p; j++) {
-            for (int k=0; k<p; k++) {
-                fs[j] += alpha * Math.abs(counts[j][k] - avg);
-            }
-            fs[j] += alpha * Math.abs(goincounts[j] - avg);
-        }
-
-        int bestJ = 0;
-        double bestF = fs[0];
-        for (int j=1; j<p; j++) {
-            if (fs[j] < bestF) {
-                bestF = fs[j];
-                bestJ = j;
-            }
-        }
-
-        int i = bestJ;
-        for (int j=0; j<n; j++) {
-            int jmed = nc1[i][j];
-            int jmedcount = jmed == goin ? goincounts[i] : counts[i][xidx[jmed]];
-            if (jmedcount > avg && jmed != j) {
-                // gain in the objective function due to removing j from jmed
-                double removalGain = d[j][jmed];
-                removalGain += alpha * Math.min(jmedcount - avg, 1);
-                removalGain -= alpha * Math.max(avg - (jmedcount - 1), 0);
-                // check if there's a median with a lower delta. Skip median with count >= avg because they cannot
-                // do better than jmed (by construction jmed is closer to j then any other),
-                double bestInsertionCost = Double.MAX_VALUE;
-                int bestInsertionMedian = -1;
-                for (int k=0; k<p; k++) {
-                    int kcount = counts[i][k];
-                    if (kcount >= avg || k == i) continue;
-                    double insertionCost = d[j][x[k]];
-                    insertionCost -= alpha * Math.min(Math.max(avg - (kcount + 1), 0), 1);
-                    insertionCost += alpha * Math.max(kcount + 1 - avg, 0);
-                    if (insertionCost < bestInsertionCost) {
-                        bestInsertionCost = insertionCost;
-                        bestInsertionMedian = x[k];
-                    }
-                }
-                int kcount = goincounts[i];
-                if (kcount < avg) {
-                    double insertionCost = d[j][goin];
-                    insertionCost -= alpha * Math.min(Math.max(avg - (kcount + 1), 0), 1);
-                    insertionCost += alpha * Math.max(kcount + 1 - avg, 0);
-                    if (insertionCost < bestInsertionCost) {
-                        bestInsertionCost = insertionCost;
-                        bestInsertionMedian = goin;
-                    }
-                }
-
-                if (bestInsertionMedian != -1 && bestInsertionCost < removalGain) {
-                    nc1[i][j] = bestInsertionMedian;
-                    if (jmed == goin) {
-                        goincounts[i] -= 1;
-                    } else {
-                        counts[i][xidx[jmed]] -= 1;
-                    }
-                    if (bestInsertionMedian == goin) {
-                        goincounts[i] += 1;
-                    } else {
-                        counts[i][xidx[bestInsertionMedian]] += 1;
-                    }
-                }
-            }
-        }
-
-        int goout = i;
-        int[] ax = nc1[i];
-        double z = 0.;
-        for (int j=0; j<n; j++)
-            z += d[j][nc1[i][j]];
-
-        for (int j=0; j<p; j++) {
-            if (j == i) continue;
-            z += alpha * Math.abs(counts[i][j] - avg);
-        }
-        z += alpha * Math.abs(goincounts[i] - avg);
-
-        return new Triple<>(x[goout], z, ax);
+        return false;
     }
 
     private boolean accept(double opt, double cur, double temperature) {

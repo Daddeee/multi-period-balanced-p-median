@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class Solution {
+public class Solution implements it.polimi.algorithm.alns.Solution {
     public static final int NO_SUPERMEDIAN = -1;
     private static final Logger LOGGER = LoggerFactory.getLogger(Solution.class);
     private final int[] periods;
@@ -26,6 +26,11 @@ public class Solution {
         this.supermedians = supermedians;
         this.objective = objective;
         this.elapsedTime = elapsedTime;
+    }
+
+    @Override
+    public double getCost() {
+        return objective;
     }
 
     public int[] getPeriods() {

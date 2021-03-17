@@ -8,17 +8,34 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.HashMap;
 
 public class BalancedAssignmentSolver {
     public static final Logger LOGGER = LoggerFactory.getLogger(BalancedAssignmentSolver.class);
 
-    public static Pair<Double, int[]> solve(int n, int p, float[][] c, double alpha, double avg, int[] x) {
+    private HashMap<int[], Pair<Double, int[]>> results = new HashMap<>();
+    private int count = 0;
+
+    public Pair<Double, int[]> solve(int n, int p, float[][] c, double alpha, double avg, int[] x) {
         return solve(n, p, c, alpha, avg, x, -1);
     }
 
-    public static Pair<Double, int[]> solve(int n, int p, float[][] c, double alpha, double avg, int[] x, double ub) {
+    public Pair<Double, int[]> solve(int n, int p, float[][] c, double alpha, double avg, int[] x, double ub) {
+        int[] medians = Arrays.copyOfRange(x, 0, p);
+        Arrays.sort(medians);
+
+        if (results.containsKey(medians)) {
+            LOGGER.info("Balanced assignment: CACHE HIT!.");
+            return results.get(medians);
+        }
+
+        count++;
+        //LOGGER.info("Solving balanced assignment for the " + count +" time.");
+
+        IloCplex cplex = null;
         try {
-            IloCplex cplex = getCplex();
+            cplex = getCplex();
 
             IloIntVar[][] x1 = new IloIntVar[n][p];
             for (int i=0; i<n; i++)
@@ -82,9 +99,15 @@ public class BalancedAssignmentSolver {
                 }
             }
 
-            return new Pair<>(obj, ax);
+            Pair<Double, int[]> result = new Pair<>(obj, ax);
+            results.put(medians, result);
+
+            return result;
         } catch (IloException e) {
             e.printStackTrace();
+        } finally {
+            if (cplex != null)
+                cplex.close();
         }
         return null;
     }

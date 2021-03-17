@@ -12,16 +12,18 @@ public class BalancedPMedianSolution {
     private int[] ax;
     private int[] c1;
     private int[] c2;
+    private int[] ccounts;
 
     private double f;
     private double lb1;
 
-    public BalancedPMedianSolution(int[] x, int[] xidx, int[] ax, int[] c1, int[] c2, double f, double lb1) {
+    public BalancedPMedianSolution(int[] x, int[] xidx, int[] ax, int[] c1, int[] c2, int[] ccounts, double f, double lb1) {
         this.x = x;
         this.xidx = xidx;
         this.ax = ax;
         this.c1 = c1;
         this.c2 = c2;
+        this.ccounts = ccounts;
         this.f = f;
         this.lb1 = lb1;
     }
@@ -32,13 +34,14 @@ public class BalancedPMedianSolution {
         int[][] c = getClosestMedians(x, n, p, d);
         this.c1 = c[0];
         this.c2 = c[1];
+        this.ccounts = getCounts(p, c1, xidx);
         this.ax = c1.clone();
-        this.f = objectiveFunction(n, d, alpha, avg);
-        this.lb1 = lb1(n, d);
+        this.f = objectiveFunction(n, p, d, alpha, avg);
+        this.lb1 = computeLb1(n, p, d, alpha, avg);
     }
 
     public BalancedPMedianSolution clone() {
-        return new BalancedPMedianSolution(x.clone(), xidx.clone(), ax.clone(), c1.clone(), c2.clone(), f, lb1);
+        return new BalancedPMedianSolution(x.clone(), xidx.clone(), ax.clone(), c1.clone(), c2.clone(), ccounts.clone(), f, lb1);
     }
 
     public void swap(int goin, int goout, int n, int p, float[][] d, double alpha, double avg) {
@@ -48,7 +51,7 @@ public class BalancedPMedianSolution {
         x[inidx] = goout;
         xidx[goin] = outidx;
         xidx[goout] = inidx;
-        update(n, p, d, x, c1, c2, goin, goout);
+        update(n, p, d, alpha, avg, goin, goout);
     }
 
     public int[] getX() {
@@ -129,52 +132,67 @@ public class BalancedPMedianSolution {
         return c;
     }
 
-    public double objectiveFunction(int n, float[][] d, double alpha, double avg) {
+    public double objectiveFunction(int n, int p, float[][] d, double alpha, double avg) {
         double w = 0;
-
-        Map<Integer, Integer> counts = new HashMap<>();
+        int[] counts = new int[p];
         for (int i=0; i<n; i++) {
             w += d[i][ax[i]];
-            int c = counts.getOrDefault(ax[i], 0);
-            counts.put(ax[i], c + 1);
+            counts[xidx[ax[i]]] += 1;
         }
-
-        if (counts.values().size() == 0)
-            return w;
-
-        for (int c : counts.values())
+        for (int c : counts) {
             w += alpha * Math.abs(c - avg);
-
+        }
         return w;
     }
 
-    public double lb1(int n, float[][] d) {
+    public double computeLb1(int n, int p, float[][] d, double alpha, double avg) {
         double w = 0;
         for (int i=0; i<n; i++)
-            w += d[i][ax[i]];
+            w += d[i][c1[i]];
+        for (int i=0; i<p; i++)
+            w += alpha * Math.abs(ccounts[i] - avg);
         return w;
     }
 
-    public void update(int n, int p, float[][] d, int[]x, int[] c1, int[] c2, int goin, int goout) {
-        // updates c1 and c2 for each location by replacing goout with goin
+    public void update(int n, int p, float[][] d, double alpha, double avg, int goin, int goout) {
+        // updates c1, c2 and counts for each location by replacing goout with goin
         for (int i=0; i<n; i++) {
-
             // if goout is current median
             if (c1[i] == goout) {
+                this.lb1 -= d[i][c1[i]];
                 // if goin is closer to i than the second median c2[i]
                 if (d[i][goin] <= d[i][c2[i]]) {
                     // it becomes the new median
                     c1[i] = goin;
                 } else {
+                    this.lb1 -= alpha * Math.abs(ccounts[xidx[goin]] - avg);
+                    ccounts[xidx[goin]] -= 1;
+                    this.lb1 += alpha * Math.abs(ccounts[xidx[goin]] - avg);
+
                     // otherwise c2[i] becomes the new median
                     c1[i] = c2[i];
                     // and another c2[i] is searched.
                     c2[i] = searchSecondMedian(i, x, c1, p, d);
+
+                    this.lb1 -= alpha * Math.abs(ccounts[xidx[c1[i]]] - avg);
+                    ccounts[xidx[c1[i]]] += 1;
+                    this.lb1 += alpha * Math.abs(ccounts[xidx[c1[i]]] - avg);
                 }
+                this.lb1 += d[i][c1[i]];
             } else {
                 if (d[i][goin] < d[i][c1[i]]) {
+                    this.lb1 -= alpha * Math.abs(ccounts[xidx[c1[i]]] - avg);
+                    ccounts[xidx[c1[i]]] -= 1;
+                    this.lb1 += alpha * Math.abs(ccounts[xidx[c1[i]]] - avg);
+
+                    this.lb1 -= d[i][c1[i]];
                     c2[i] = c1[i];
                     c1[i] = goin;
+                    this.lb1 += d[i][c1[i]];
+
+                    this.lb1 -= alpha * Math.abs(ccounts[xidx[goin]] - avg);
+                    ccounts[xidx[goin]] += 1;
+                    this.lb1 += alpha * Math.abs(ccounts[xidx[goin]] - avg);
                 } else if (d[i][goin] < d[i][c2[i]]) {
                     c2[i] = goin;
                 } else if (c2[i] == goout) {
@@ -196,5 +214,12 @@ public class BalancedPMedianSolution {
             }
         }
         return secondMedian;
+    }
+
+    private int[] getCounts(int p, int[] ax, int[] xidx) {
+        int[] counts = new int[p];
+        for (int a : ax)
+            counts[xidx[a]] += 1;
+        return counts;
     }
 }
