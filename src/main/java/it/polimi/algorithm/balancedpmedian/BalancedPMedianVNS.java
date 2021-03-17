@@ -42,45 +42,34 @@ public class BalancedPMedianVNS implements Solver {
 
         int count = 0;
         do {
-            //BalancedPMedianSolution acc = opt.clone();
+            BalancedPMedianSolution acc = opt.clone();
             BalancedPMedianSolution cur = opt.clone();
 
-            //double temperature = getInitialTemperature(cur.getF());
-            //double cooling = 0.995;
+            double temperature = getInitialTemperature(cur.getF());
+            double cooling = 0.995;
 
             int k = 1;
             while (k <= kmax) {
                 // shaking
                 shake(cur, k, n, p, d, avg, alpha);
 
-                LOGGER.info("Starting local search. k=" + k + " cur=" + cur.getF() + " opt=" + opt.getF());
                 localSearch(cur, n, p, d, avg, alpha);
-                LOGGER.info("Completed local search. k=" + k + " cur=" + cur.getF() + " opt=" + opt.getF());
 
-                if (cur.getF() < opt.getF()) {
-                    opt = cur.clone();
+                if (accept(acc.getF(), cur.getF(), temperature)) {
+                    acc = cur.clone();
                     k = 1;
+                    if (acc.getF() < opt.getF()) {
+                        opt = acc.clone();
+                    }
                 } else {
-                    cur = opt.clone();
+                    cur = acc.clone();
                     k = k + 1;
                 }
 
-                // Move or not
-                //if (accept(acc.getF(), cur.getF(), temperature)) {
-                //    acc = cur.clone();
-                //    k = 1;
-                //    if (acc.getF() < opt.getF()) {
-                //        opt = acc.clone();
-                //    }
-                //} else {
-                //    cur = acc.clone();
-                //    k = k + 1;
-                //}
-
-                //temperature = temperature*cooling;
+                temperature = temperature*cooling;
             }
             count++;
-            //LOGGER.info("Restarting. best=" + fopt + " count=" + count);
+            LOGGER.info("Restarting. best=" + opt.getF() + " count=" + count);
         } while (count < MAX_RESTART_WITHOUT_IMPROVEMENTS);
 
         double end = System.nanoTime();
@@ -106,33 +95,36 @@ public class BalancedPMedianVNS implements Solver {
     }
 
     private void localSearch(BalancedPMedianSolution sol, int n, int p, float[][] d, double avg, double alpha) {
-        for (int i=p; i<n; i++) {
-            for (int j=0; j<p; j++) {
-                BalancedPMedianSolution incumbent = sol.clone();
-                int goin = incumbent.getX()[i];
-                int goout = incumbent.getX()[j];
-                incumbent.swap(goin, goout, n, p, d, alpha, avg);
-                if (isBetter(incumbent, sol, n, p, d, alpha, avg)) {
-                    sol.swap(goin, goout, n, p, d, alpha, avg);
-                    sol.setF(incumbent.getF());
-                    sol.setAx(incumbent.getAx());
-                    i = p;
-                    break;
+        while(true) {
+            // find optimal goin and gout
+            double wopt = Float.MAX_VALUE;
+            int goinopt = -1, gooutopt = -1;
+            int[] axopt = new int[0];
+            for (int i=p; i < n; i++) {
+                int goin = sol.getX()[i];
+                Triple<Integer, Double, int[]> triple = move(sol, goin, wopt, n, p, d, alpha, avg);
+                if (triple != null) {
+                    double w = triple.getSecond();
+                    if (w < wopt) {
+                        wopt = w;
+                        goinopt = goin;
+                        gooutopt = triple.getFirst();
+                        axopt = triple.getThird();
+                    }
                 }
             }
-        }
-    }
 
-    private boolean isBetter(BalancedPMedianSolution incumbent, BalancedPMedianSolution opt, int n, int p, float[][] d,
-                             double alpha, double avg) {
-        //if (incumbent.getLb1() > opt.getF()) return false;
-        Pair<Double, int[]> optAx = balancedAssignmentSolver.solve(n, p, d, avg, alpha, incumbent.getX());
-        if (optAx.getFirst() < opt.getF()) {
-            incumbent.setAx(optAx.getSecond());
-            incumbent.setF(optAx.getFirst());
-            return true;
+            // no improvement found
+            if (wopt - sol.getF() >= 0) {
+                sol.setAx(axopt);
+                return;
+            }
+
+            // update obj function
+            sol.setF(wopt);
+
+            sol.swap(goinopt, gooutopt, n, p, d, alpha, avg);
         }
-        return false;
     }
 
     private boolean accept(double opt, double cur, double temperature) {
@@ -145,5 +137,142 @@ public class BalancedPMedianVNS implements Solver {
         return w*obj / Math.log(2);
     }
 
+
+    public Triple<Integer, Double, int[]> move(BalancedPMedianSolution sol, int goin, double fopt, int n, int p,
+                                               float[][] d, double alpha, double avg) {
+        int[] x = sol.getX();
+        int[] c1 = sol.getC1();
+        int[] c2 = sol.getC2();
+        int[] xidx = sol.getXidx();
+
+        int bestGoout = -1;
+        int[] bestAx = null;
+        double bestZ = Double.POSITIVE_INFINITY;
+
+        for (int k=0; k<p; k++) {
+            int goout = x[k];
+            int[] nc1 = c1.clone();
+            int[] nc2 = c2.clone();
+            int[] counts = new int[p];
+            int goincount = 0;
+
+            double lb1 = 0;
+
+            // update with new medians
+            for (int i=0; i<n; i++) {
+                if (nc1[i] == goout) {
+                    if (d[i][goin] <= d[i][c2[i]]) {
+                        nc1[i] = goin;
+                        lb1 += d[i][goin];
+                    } else {
+                        nc1[i] = nc2[i];
+                        lb1 += d[i][nc2[i]];
+                    }
+                } else {
+                    if (d[i][goin] < d[i][nc1[i]]) {
+                        lb1 += d[i][goin];
+                        nc2[i] = nc1[i];
+                        nc1[i] = goin;
+                    } else if (d[i][goin] < d[i][nc2[i]]) {
+                        nc2[i] = goin;
+                        lb1 += d[i][nc1[i]];
+                    } else if (nc2[i] == goout) {
+                        nc2[i] = searchSecondMedian(i, x, nc1, goin, goout, p, d);
+                    }
+                }
+            }
+
+            // SKIP IF LB1 > FOPT
+            if (lb1 > fopt) continue;
+
+            for (int i = 0; i < n; i++)
+                if (nc1[i] == goin) goincount += 1;
+                else counts[xidx[nc1[i]]] += 1;
+
+            for (int j=0; j<n; j++) {
+                int jmed = nc1[j];
+                int jmedcount = jmed == goin ? goincount : counts[xidx[jmed]];
+                if (jmedcount > avg && jmed != j) {
+                    // gain in the objective function due to removing j from jmed
+                    double removalGain = d[j][jmed];
+                    removalGain += alpha * Math.min(jmedcount - avg, 1);
+                    removalGain -= alpha * Math.max(avg - (jmedcount - 1), 0);
+                    // check if there's a median with a lower delta. Skip median with count >= avg because they cannot
+                    // do better than jmed (by construction jmed is closer to j then any other),
+                    double bestInsertionCost = Double.MAX_VALUE;
+                    int bestInsertionMedian = -1;
+                    for (int i=0; i<p; i++) {
+                        int icount = counts[i];
+                        if (icount >= avg || k == i) continue;
+                        int insertionMedian = x[i];
+                        double insertionCost = d[j][insertionMedian];
+                        insertionCost -= alpha * Math.min(Math.max(avg - (icount + 1), 0), 1);
+                        insertionCost += alpha * Math.max(icount + 1 - avg, 0);
+                        if (insertionCost < bestInsertionCost) {
+                            bestInsertionCost = insertionCost;
+                            bestInsertionMedian = insertionMedian;
+                        }
+                    }
+                    int icount = goincount;
+                    if (icount < avg) {
+                        double insertionCost = d[j][goin];
+                        insertionCost -= alpha * Math.min(Math.max(avg - (icount + 1), 0), 1);
+                        insertionCost += alpha * Math.max(icount + 1 - avg, 0);
+                        if (insertionCost < bestInsertionCost) {
+                            bestInsertionCost = insertionCost;
+                            bestInsertionMedian = goin;
+                        }
+                    }
+
+                    if (bestInsertionMedian != -1 && bestInsertionCost < removalGain) {
+                        nc1[j] = bestInsertionMedian;
+                        if (jmed == goin) {
+                            goincount -= 1;
+                        } else {
+                            counts[xidx[jmed]] -= 1;
+                        }
+                        if (bestInsertionMedian == goin) {
+                            goincount += 1;
+                        } else {
+                            counts[xidx[bestInsertionMedian]] += 1;
+                        }
+                    }
+                }
+            }
+            
+            double z = 0.;
+            for (int j=0; j<n; j++)
+                z += d[j][nc1[j]];
+            for (int j=0; j<p; j++) {
+                if (j == k) continue;
+                z += alpha * Math.abs(counts[j] - avg);
+            }
+            z += alpha * Math.abs(goincount - avg);
+            if (z < bestZ) {
+                bestGoout = k;
+                bestZ = z;
+                bestAx = nc1;
+            }
+        }
+
+        if (bestGoout == -1) return null;
+
+        return new Triple<>(x[bestGoout], bestZ, bestAx);
+    }
+
+    private int searchSecondMedian(int i, int[] x, int[] c1, int goin, int goout, int p, float[][] d) {
+        float newMin = Float.MAX_VALUE;
+        int secondMedian = -1;
+        for (int j=0; j<p; j++) {
+            if (x[j] != c1[i] && x[j] != goout && d[i][x[j]] < newMin) {
+                newMin = d[i][x[j]];
+                secondMedian = x[j];
+            }
+        }
+        if (d[i][goin] < newMin && c1[i] != goin)
+            secondMedian = goin;
+
+        return secondMedian;
+    }
     
 }

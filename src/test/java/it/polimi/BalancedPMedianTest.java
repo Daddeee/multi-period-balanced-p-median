@@ -110,8 +110,8 @@ public class BalancedPMedianTest {
             double resSum = 0., timeSum = 0.;
             Solution best = null;
             for (int k=0; k<tries; k++) {
-                //BalancedPMedianVNS vns = new BalancedPMedianVNS(1337);
-                BalancedPMedianRVNS vns = new BalancedPMedianRVNS(1337);
+                BalancedPMedianVNS vns = new BalancedPMedianVNS(1337);
+                //BalancedPMedianRVNS vns = new BalancedPMedianRVNS(1337);
                 Solution vnsSolution = vns.run(problem);
                 resSum += vnsSolution.getObjective();
                 timeSum += vnsSolution.getElapsedTime();
