@@ -185,73 +185,21 @@ public class BalancedPMedianVNS implements Solver {
             // SKIP IF LB1 > FOPT
             if (lb1 > fopt) continue;
 
-            for (int i = 0; i < n; i++)
-                if (nc1[i] == goin) goincount += 1;
-                else counts[xidx[nc1[i]]] += 1;
+            int[] newx = x.clone();
+            int goinidx = xidx[goin], gooutidx = k;
+            newx[goinidx] = goout;
+            newx[gooutidx] = goin;
 
-            for (int j=0; j<n; j++) {
-                int jmed = nc1[j];
-                int jmedcount = jmed == goin ? goincount : counts[xidx[jmed]];
-                if (jmedcount > avg && jmed != j) {
-                    // gain in the objective function due to removing j from jmed
-                    double removalGain = d[j][jmed];
-                    removalGain += alpha * Math.min(jmedcount - avg, 1);
-                    removalGain -= alpha * Math.max(avg - (jmedcount - 1), 0);
-                    // check if there's a median with a lower delta. Skip median with count >= avg because they cannot
-                    // do better than jmed (by construction jmed is closer to j then any other),
-                    double bestInsertionCost = Double.MAX_VALUE;
-                    int bestInsertionMedian = -1;
-                    for (int i=0; i<p; i++) {
-                        int icount = counts[i];
-                        if (icount >= avg || k == i) continue;
-                        int insertionMedian = x[i];
-                        double insertionCost = d[j][insertionMedian];
-                        insertionCost -= alpha * Math.min(Math.max(avg - (icount + 1), 0), 1);
-                        insertionCost += alpha * Math.max(icount + 1 - avg, 0);
-                        if (insertionCost < bestInsertionCost) {
-                            bestInsertionCost = insertionCost;
-                            bestInsertionMedian = insertionMedian;
-                        }
-                    }
-                    int icount = goincount;
-                    if (icount < avg) {
-                        double insertionCost = d[j][goin];
-                        insertionCost -= alpha * Math.min(Math.max(avg - (icount + 1), 0), 1);
-                        insertionCost += alpha * Math.max(icount + 1 - avg, 0);
-                        if (insertionCost < bestInsertionCost) {
-                            bestInsertionCost = insertionCost;
-                            bestInsertionMedian = goin;
-                        }
-                    }
 
-                    if (bestInsertionMedian != -1 && bestInsertionCost < removalGain) {
-                        nc1[j] = bestInsertionMedian;
-                        if (jmed == goin) {
-                            goincount -= 1;
-                        } else {
-                            counts[xidx[jmed]] -= 1;
-                        }
-                        if (bestInsertionMedian == goin) {
-                            goincount += 1;
-                        } else {
-                            counts[xidx[bestInsertionMedian]] += 1;
-                        }
-                    }
-                }
-            }
-            
-            double z = 0.;
-            for (int j=0; j<n; j++)
-                z += d[j][nc1[j]];
-            for (int j=0; j<p; j++) {
-                if (j == k) continue;
-                z += alpha * Math.abs(counts[j] - avg);
-            }
-            z += alpha * Math.abs(goincount - avg);
-            if (z < bestZ) {
+
+            Pair<Double, int[]> optAx = balancedAssignmentSolver.solve(n, p, d, alpha, avg, newx, fopt);
+
+            if (optAx == null) continue;
+
+            if (optAx.getFirst() < bestZ) {
                 bestGoout = k;
-                bestZ = z;
-                bestAx = nc1;
+                bestZ = optAx.getFirst();
+                bestAx = optAx.getSecond();
             }
         }
 

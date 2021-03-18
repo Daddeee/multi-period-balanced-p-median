@@ -87,7 +87,7 @@ public class BalancedPMedianTest {
 
         //files = Arrays.copyOfRange(files, 0, 1);
 
-        int numInstances = files.length;
+        int numInstances = 1;//files.length;
         double[] opt = new double[numInstances];
         int[] n = new int[numInstances];
         int[] p = new int[numInstances];
@@ -97,7 +97,7 @@ public class BalancedPMedianTest {
 
         int tries = 1;
 
-        for (int i=0; i<files.length; i++) {
+        for (int i=0; i<numInstances; i++) {
 
             String filePath = basePath + files[i];
             Problem problem = AugeratReader.read(filePath);

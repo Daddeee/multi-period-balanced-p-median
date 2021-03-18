@@ -69,16 +69,18 @@ public class BalancedAssignmentSolver {
                 cplex.addGe(expr, avg);
             }
 
+            IloLinearNumExpr ubexpr = cplex.linearNumExpr();
             IloLinearNumExpr objexpr = cplex.linearNumExpr();
             for (int j=0; j<p; j++) {
                 for (int i=0; i<n; i++)
                     objexpr.addTerm(x1[i][j], c[i][x[j]]);
                 objexpr.addTerm(w[j], alpha);
             }
-            cplex.addMinimize(objexpr);
 
-            //if (ub > 0)
-            //    cplex.addLe(objexpr, ub);
+            if (ub > 0)
+                cplex.addLe(objexpr, ub);
+
+            cplex.addMinimize(objexpr);
 
             long start = System.nanoTime();
             boolean status = cplex.solve();
